@@ -9,16 +9,22 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, profile, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/login");
-    } else if (!isLoading && adminOnly && user?.role !== "admin") {
-      navigate("/");
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        console.log('User not authenticated, redirecting to login');
+        navigate("/login");
+      } else if (adminOnly && profile?.role !== "admin") {
+        console.log('Admin access required, user is not admin. Redirecting to dashboard');
+        navigate("/dashboard");
+      } else {
+        console.log('Authentication verified:', profile?.role);
+      }
     }
-  }, [isLoading, isAuthenticated, navigate, adminOnly, user]);
+  }, [isLoading, isAuthenticated, profile, navigate, adminOnly]);
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
@@ -28,7 +34,7 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
     return null;
   }
 
-  if (adminOnly && user?.role !== "admin") {
+  if (adminOnly && profile?.role !== "admin") {
     return null;
   }
 

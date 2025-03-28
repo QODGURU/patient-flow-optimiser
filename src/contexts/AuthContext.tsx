@@ -49,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -65,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -80,19 +82,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    console.log("Attempting login with:", email);
     
     try {
-      // Simple direct login - no signup attempts
-      const { error } = await supabase.auth.signInWithPassword({
+      // Direct login without any signup attempts
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error("Login failed:", error);
         throw error;
       }
 
-      await refreshProfile();
+      console.log("Login successful:", data.user?.email);
+      if (data.user) {
+        await refreshProfile();
+        toast.success(`Welcome back, ${data.user.email}!`);
+      }
     } catch (error) {
       console.error("Login error:", error);
       throw error;
