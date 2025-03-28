@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 export type Language = "en" | "ar";
@@ -59,7 +60,6 @@ const translations: Translations = {
     "female": "Female",
     "other": "Other",
     "treatmentInformation": "Treatment Information",
-    "price": "Price (AED)",
     "thisPatientNeedsFollowUp": "This patient needs follow-up",
     "clinicInformation": "Clinic Information",
     "assignedDoctor": "Assigned Doctor",
