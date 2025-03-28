@@ -1,8 +1,9 @@
 
+import { PatientStatus } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
-  status: "pending" | "contacted" | "interested" | "booked" | "cold";
+  status: PatientStatus;
   className?: string;
 }
 
@@ -26,11 +27,18 @@ const statusMap = {
   cold: {
     label: "Cold",
     className: "bg-gray-100 text-gray-700 border-gray-300"
+  },
+  "opt-out": {
+    label: "Opt-out",
+    className: "bg-red-100 text-red-800 border-red-300"
   }
 };
 
 const StatusBadge = ({ status, className }: StatusBadgeProps) => {
-  const { label, className: badgeClassName } = statusMap[status];
+  const { label, className: badgeClassName } = statusMap[status] || {
+    label: status,
+    className: "bg-gray-100 text-gray-700 border-gray-300"
+  };
   
   return (
     <span className={cn(
