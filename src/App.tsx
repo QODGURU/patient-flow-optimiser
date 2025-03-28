@@ -16,6 +16,7 @@ import PatientDetailsPage from "./pages/PatientDetailsPage";
 import AddPatientPage from "./pages/AddPatientPage";
 import FollowUpsPage from "./pages/FollowUpsPage";
 import DoctorsPage from "./pages/DoctorsPage";
+import SettingsPage from "./pages/SettingsPage";
 import AdminOnlyPage from "./pages/AdminOnlyPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -92,6 +93,17 @@ const App = () => (
                 <ProtectedRoute adminOnly>
                   <Layout>
                     <DoctorsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SettingsPage />
                   </Layout>
                 </ProtectedRoute>
               }
