@@ -15,32 +15,79 @@ import AdminOnlyPage from "./pages/AdminOnlyPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ColdLeadsPage from "./pages/ColdLeadsPage";
 import { AuthProvider } from "./contexts/AuthContext";
+import Index from "./pages/Index";
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={
+          <Route path="/dashboard" element={
             <ProtectedRoute>
               <Layout>
-                <Routes>
-                  <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="dashboard" element={<DashboardPage />} />
-                  <Route path="patients" element={<PatientsPage />} />
-                  <Route path="patients/:id" element={<PatientDetailsPage />} />
-                  <Route path="add-patient" element={<AddPatientPage />} />
-                  <Route path="cold-leads" element={<ColdLeadsPage />} />
-                  <Route path="doctors" element={<DoctorsPage />} />
-                  <Route path="follow-ups" element={<FollowUpsPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="admin" element={<ProtectedRoute adminOnly><AdminOnlyPage /></ProtectedRoute>} />
-                  <Route path="*" element={<NotFoundPage />} />
-                </Routes>
+                <DashboardPage />
               </Layout>
             </ProtectedRoute>
           } />
+          <Route path="/patients" element={
+            <ProtectedRoute>
+              <Layout>
+                <PatientsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/patients/:id" element={
+            <ProtectedRoute>
+              <Layout>
+                <PatientDetailsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/add-patient" element={
+            <ProtectedRoute>
+              <Layout>
+                <AddPatientPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/cold-leads" element={
+            <ProtectedRoute>
+              <Layout>
+                <ColdLeadsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/doctors" element={
+            <ProtectedRoute>
+              <Layout>
+                <DoctorsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/follow-ups" element={
+            <ProtectedRoute>
+              <Layout>
+                <FollowUpsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Layout>
+                <SettingsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute adminOnly>
+              <Layout>
+                <AdminOnlyPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
     </AuthProvider>
