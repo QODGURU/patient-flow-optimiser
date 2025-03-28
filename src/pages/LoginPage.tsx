@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { AlertCircle } from "lucide-react";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -26,6 +27,16 @@ const LoginPage = () => {
     }
   };
 
+  const setDemoCredentials = (type: 'admin' | 'doctor') => {
+    if (type === 'admin') {
+      setEmail("admin@example.com");
+      setPassword("password123");
+    } else {
+      setEmail("doctor@example.com");
+      setPassword("password123");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD] p-4">
       <div className="max-w-md w-full">
@@ -37,6 +48,38 @@ const LoginPage = () => {
             Login to manage your patient follow-ups
           </p>
         </div>
+
+        <Card className="border-[#101B4C]/10 mb-6">
+          <CardHeader>
+            <CardTitle className="text-[#101B4C]">Demo Credentials</CardTitle>
+            <CardDescription>
+              Use these credentials to explore the application
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="outline" 
+                className="border-[#101B4C] text-[#101B4C] flex justify-between items-center"
+                onClick={() => setDemoCredentials('admin')}
+              >
+                <span className="font-semibold">Admin User</span>
+                <span className="text-xs">admin@example.com</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="border-[#101B4C] text-[#101B4C] flex justify-between items-center"
+                onClick={() => setDemoCredentials('doctor')}
+              >
+                <span className="font-semibold">Doctor User</span>
+                <span className="text-xs">doctor@example.com</span>
+              </Button>
+            </div>
+            <p className="text-xs text-center text-[#2B2E33]/80">
+              Password for both accounts: <span className="font-mono bg-[#F0F0F0] px-1 py-0.5 rounded">password123</span>
+            </p>
+          </CardContent>
+        </Card>
 
         <Card className="border-[#101B4C]/10">
           <CardHeader>
@@ -83,12 +126,6 @@ const LoginPage = () => {
             </CardFooter>
           </form>
         </Card>
-        
-        <div className="mt-4 text-center text-sm text-[#2B2E33]">
-          <p>Demo credentials:</p>
-          <p>Admin: admin@example.com / password123</p>
-          <p>Doctor: doctor@example.com / password123</p>
-        </div>
       </div>
     </div>
   );
