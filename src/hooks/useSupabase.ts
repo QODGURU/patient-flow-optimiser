@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
-// Define valid table names as a literal type instead of using a generic parameter
+// Define valid table names as a literal type
 type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings';
 
 export function useSupabaseQuery<T>(
@@ -52,13 +52,13 @@ export function useSupabaseQuery<T>(
         .select('*', { count: 'exact', head: true });
       
       // Apply filters to count query
-      let filteredCountQuery = countQuery;
+      let filteredCountQuery: any = countQuery;
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
-            filteredCountQuery = filteredCountQuery.in(key, value) as typeof filteredCountQuery;
+            filteredCountQuery = filteredCountQuery.in(key, value);
           } else {
-            filteredCountQuery = filteredCountQuery.eq(key, value) as typeof filteredCountQuery;
+            filteredCountQuery = filteredCountQuery.eq(key, value);
           }
         }
       });
@@ -74,29 +74,30 @@ export function useSupabaseQuery<T>(
         .select(foreignTable ? `${columns}, ${foreignTable}(*)` : columns);
 
       // Apply filters
+      let filteredQuery: any = query;
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
-            query = query.in(key, value) as typeof query;
+            filteredQuery = filteredQuery.in(key, value);
           } else {
-            query = query.eq(key, value) as typeof query;
+            filteredQuery = filteredQuery.eq(key, value);
           }
         }
       });
 
       // Apply ordering
       if (orderBy) {
-        query = query.order(orderBy.column, {
+        filteredQuery = filteredQuery.order(orderBy.column, {
           ascending: orderBy.ascending ?? true
         });
       }
 
       // Apply pagination
       if (limit) {
-        query = query.range(page * limit, (page + 1) * limit - 1).limit(limit);
+        filteredQuery = filteredQuery.range(page * limit, (page + 1) * limit - 1).limit(limit);
       }
 
-      const { data: fetchedData, error: fetchError } = await query;
+      const { data: fetchedData, error: fetchError } = await filteredQuery;
 
       if (fetchError) throw fetchError;
       
