@@ -116,10 +116,17 @@ const PatientsPage = () => {
     { id: "last_interaction_outcome", name: "Last Outcome" },
     { id: "call_attempts", name: "Call Attempts" },
     { id: "sms_attempts", name: "SMS Attempts" },
+    { id: "sms_transcript", name: "SMS Transcript" },
+    { id: "call_transcript", name: "Call Transcript" },
     { id: "preferred_time", name: "Preferred Time" },
     { id: "preferred_channel", name: "Preferred Channel" },
-    { id: "interaction_rating", name: "Interaction Rating" },
+    { id: "availability_preferences", name: "Availability Preferences" },
     { id: "notes", name: "Notes" },
+    { id: "interaction_rating", name: "Interaction Rating" },
+    { id: "patient_feedback", name: "Patient Feedback" },
+    { id: "last_modified", name: "Last Modified" },
+    { id: "last_modified_by", name: "Last Modified By" },
+    { id: "script", name: "Script" },
     { id: "actions", name: "Actions" },
   ];
 
@@ -172,6 +179,7 @@ const PatientsPage = () => {
   const renderCellContent = (patient: Patient, columnId: string) => {
     const clinic = clinics.find(c => c.id === patient.clinic_id);
     const doctor = doctors.find(d => d.id === patient.doctor_id);
+    const lastModifiedBy = doctors.find(d => d.id === patient.last_modified_by);
 
     switch (columnId) {
       case "id":
@@ -223,16 +231,52 @@ const PatientsPage = () => {
         return patient.call_attempts || 0;
       case "sms_attempts":
         return patient.sms_attempts || 0;
+      case "sms_transcript":
+        return (
+          <div className="max-w-xs truncate" title={patient.sms_transcript || ""}>
+            {patient.sms_transcript || "No transcript"}
+          </div>
+        );
+      case "call_transcript":
+        return (
+          <div className="max-w-xs truncate" title={patient.call_transcript || ""}>
+            {patient.call_transcript || "No transcript"}
+          </div>
+        );
       case "preferred_time":
         return patient.preferred_time || "N/A";
       case "preferred_channel":
         return patient.preferred_channel || "N/A";
+      case "availability_preferences":
+        return (
+          <div className="max-w-xs truncate" title={patient.availability_preferences || ""}>
+            {patient.availability_preferences || "Not specified"}
+          </div>
+        );
       case "interaction_rating":
         return patient.interaction_rating || "N/A";
+      case "patient_feedback":
+        return (
+          <div className="max-w-xs truncate" title={patient.patient_feedback || ""}>
+            {patient.patient_feedback || "No feedback"}
+          </div>
+        );
       case "notes":
         return (
           <div className="max-w-xs truncate" title={patient.notes || ""}>
             {patient.notes || "No notes"}
+          </div>
+        );
+      case "last_modified":
+        return patient.last_modified 
+          ? new Date(patient.last_modified).toLocaleString() 
+          : "N/A";
+      case "last_modified_by":
+        return lastModifiedBy?.name || "N/A";
+      case "script":
+        return (
+          <div className="max-w-xs truncate" title={patient.script || ""}>
+            {patient.script || "No script"}
           </div>
         );
       case "actions":
@@ -449,7 +493,7 @@ const PatientsPage = () => {
               
               <PaginationItem>
                 <PaginationNext 
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev +.1))}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
                   className={currentPage === totalPages - 1 ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>

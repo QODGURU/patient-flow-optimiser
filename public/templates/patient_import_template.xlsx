@@ -1,4 +1,26 @@
 
-// This is just a placeholder file since we can't actually generate a real Excel file
-// In a real application, this would be a properly formatted Excel template with columns
-// such as Name, Phone, Age, Gender, Treatment, Price, Clinic, etc.
+// This is a template for importing patients
+
+// Fields included in the template:
+// Patient Name*
+// Age
+// Gender (Male/Female/Other)
+// Phone* (+971 format)
+// Email
+// Treatment Category
+// Treatment Type
+// Price (AED)
+// Follow-Up Required (Yes/No)
+// Status (Pending/Contacted/Interested/Booked/Not Interested/Cold/Opt-out)
+// Clinic Name
+// Assigned Doctor
+// Preferred Follow-Up Time (Morning/Afternoon/Evening)
+// Preferred Channel (Call/SMS/Email)
+// Availability Preferences
+// Notes
+// Script
+
+// * Required fields
+
+// Note: In a real implementation, this would be an actual Excel file with these headers
+// and sample data rows. Since we can only create a text file here, this is just a placeholder.

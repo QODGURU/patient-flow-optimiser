@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, PhoneCall, MessageSquare, Star } from "lucide-react";
+import { Users, PhoneCall, MessageSquare, Star, Thumbs, AlertTriangle, Calendar } from "lucide-react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { Patient, FollowUp } from "@/types/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,15 +24,15 @@ import {
   Area
 } from "recharts";
 
-// Premium color palette
+// Premium color palette based on the image
 const COLORS = [
-  "#101B4C", // Midnight Navy
-  "#00FFC8", // Radiant Aquamarine
-  "#2B2E33", // Graphite Grey
-  "#FFC107", // Gold Amber
-  "#FF3B3B", // Luxe Crimson
-  "#8066DC", // Premium Purple
-  "#01C5C4", // Teal Accent
+  "#101B4C", // Dark Blue
+  "#00FFC8", // Teal
+  "#2B2E33", // Dark Gray
+  "#FFC107", // Gold
+  "#FF3B3B", // Red
+  "#8066DC", // Purple
+  "#01C5C4", // Cyan
 ];
 
 const DashboardPage = () => {
@@ -73,11 +73,14 @@ const DashboardPage = () => {
 
   // Count follow-ups by type
   const followUpCounts = useMemo(() => {
-    if (followUpsLoading) return { call: 0, message: 0, total: 0, pending: 0 };
+    if (followUpsLoading) return { call: 0, message: 0, total: 0, pending: 0, notInterested: 0, interested: 0 };
     
     const pending = filteredPatients.filter(p => 
       p.status === 'Pending' || p.status === 'Contacted'
     ).length;
+    
+    const interested = filteredPatients.filter(p => p.status === 'Interested').length;
+    const notInterested = filteredPatients.filter(p => p.status === 'Not Interested').length;
     
     const stats = followUps.reduce((acc, followUp) => {
       if (followUp.type.toLowerCase().includes('call')) {
@@ -87,7 +90,7 @@ const DashboardPage = () => {
       }
       acc.total += 1;
       return acc;
-    }, { call: 0, message: 0, total: 0, pending });
+    }, { call: 0, message: 0, total: 0, pending, interested, notInterested });
     
     return stats;
   }, [followUps, followUpsLoading, filteredPatients]);
@@ -152,6 +155,72 @@ const DashboardPage = () => {
     }));
   }, [filteredPatients, patientsLoading]);
 
+  // Channel preference distribution
+  const channelPreferences = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    const preferences = filteredPatients.reduce((acc, patient) => {
+      const channel = patient.preferred_channel || 'Not Specified';
+      acc[channel] = (acc[channel] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(preferences).map(([channel, count]) => ({
+      channel,
+      count,
+    }));
+  }, [filteredPatients, patientsLoading]);
+
+  // Time preference distribution
+  const timePreferences = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    const preferences = filteredPatients.reduce((acc, patient) => {
+      const time = patient.preferred_time || 'Not Specified';
+      acc[time] = (acc[time] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(preferences).map(([time, count]) => ({
+      time,
+      count,
+    }));
+  }, [filteredPatients, patientsLoading]);
+
+  // Conversion rate over time (interested / total patients per week)
+  const conversionTrend = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    // Group by week
+    const weeks: Record<string, { week: string; total: number; interested: number }> = {};
+    
+    filteredPatients.forEach(patient => {
+      if (!patient.created_at) return;
+      
+      const date = new Date(patient.created_at);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      const weekKey = weekStart.toISOString().split('T')[0];
+      
+      if (!weeks[weekKey]) {
+        weeks[weekKey] = { week: weekKey, total: 0, interested: 0 };
+      }
+      
+      weeks[weekKey].total += 1;
+      if (patient.status === 'Interested') {
+        weeks[weekKey].interested += 1;
+      }
+    });
+    
+    return Object.values(weeks)
+      .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime())
+      .slice(-8)
+      .map(week => ({
+        ...week,
+        rate: week.total > 0 ? (week.interested / week.total) * 100 : 0
+      }));
+  }, [filteredPatients, patientsLoading]);
+
   // Get recent follow-ups
   const recentFollowUps = useMemo(() => {
     if (followUpsLoading || patientsLoading) return [];
@@ -179,7 +248,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
           <CardContent className="p-6 flex items-center">
             <div className="bg-[#101B4C]/10 p-3 rounded-full mr-4">
@@ -209,8 +278,24 @@ const DashboardPage = () => {
                 <Skeleton className="h-8 w-16" />
               ) : (
                 <h3 className="text-2xl font-bold text-[#101B4C]">
-                  {filteredPatients.filter(p => p.status === 'Interested').length}
+                  {followUpCounts.interested}
                 </h3>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardContent className="p-6 flex items-center">
+            <div className="bg-[#FF3B3B]/10 p-3 rounded-full mr-4">
+              <AlertTriangle className="h-6 w-6 text-[#FF3B3B]" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[#2B2E33]">Not Interested</p>
+              {patientsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <h3 className="text-2xl font-bold text-[#101B4C]">{followUpCounts.notInterested}</h3>
               )}
             </div>
           </CardContent>
@@ -234,8 +319,8 @@ const DashboardPage = () => {
 
         <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
           <CardContent className="p-6 flex items-center">
-            <div className="bg-[#FF3B3B]/10 p-3 rounded-full mr-4">
-              <MessageSquare className="h-6 w-6 text-[#FF3B3B]" />
+            <div className="bg-[#8066DC]/10 p-3 rounded-full mr-4">
+              <Calendar className="h-6 w-6 text-[#8066DC]" />
             </div>
             <div>
               <p className="text-sm font-medium text-[#2B2E33]">
@@ -251,9 +336,9 @@ const DashboardPage = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Patient Status Chart */}
-        <Card className="lg:col-span-1 hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
           <CardHeader>
             <CardTitle className="text-xl text-[#101B4C]">Patient Status</CardTitle>
             <CardDescription>Distribution by current status</CardDescription>
@@ -292,8 +377,67 @@ const DashboardPage = () => {
           </CardContent>
         </Card>
         
+        {/* Conversion Rate Trend */}
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Conversion Rate</CardTitle>
+            <CardDescription>Weekly interested patients vs. total</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {patientsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : conversionTrend.length > 0 ? (
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={conversionTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="week" 
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return `${date.getMonth()+1}/${date.getDate()}`;
+                      }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }} 
+                      domain={[0, 100]}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip 
+                      formatter={(value) => [`${value.toFixed(1)}%`, "Conversion Rate"]}
+                      contentStyle={{ 
+                        backgroundColor: '#FDFDFD', 
+                        borderColor: '#101B4C20',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="rate" 
+                      name="Conversion Rate" 
+                      stroke="#00FFC8" 
+                      strokeWidth={3}
+                      dot={{ stroke: '#101B4C', strokeWidth: 2, r: 4, fill: '#00FFC8' }}
+                      activeDot={{ r: 6, stroke: '#101B4C', strokeWidth: 2, fill: '#00FFC8' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No conversion trend data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Follow-up Trend Chart */}
-        <Card className="lg:col-span-2 hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
           <CardHeader>
             <CardTitle className="text-xl text-[#101B4C]">Follow-up Trends</CardTitle>
             <CardDescription>Communication activity over time</CardDescription>
@@ -351,6 +495,48 @@ const DashboardPage = () => {
             ) : (
               <div className="text-center py-10 text-[#2B2E33]">
                 No follow-up trend data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Preferred Channel Chart */}
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Communication Preferences</CardTitle>
+            <CardDescription>Patients by preferred contact method</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {patientsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : channelPreferences.length > 0 ? (
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={channelPreferences}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="channel" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#FDFDFD', 
+                        borderColor: '#101B4C20',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="count" 
+                      name="Patients" 
+                      fill="#8066DC"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No channel preference data available
               </div>
             )}
           </CardContent>
@@ -429,6 +615,7 @@ const DashboardPage = () => {
                     <Bar 
                       dataKey="count" 
                       name="Patients" 
+                      fill="#00FFC8"
                       radius={[4, 4, 0, 0]}
                     >
                       {treatmentCategories.map((entry, index) => (
