@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
+// Define valid table names as a literal type instead of using a generic parameter
 type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings';
 
 export function useSupabaseQuery<T>(
