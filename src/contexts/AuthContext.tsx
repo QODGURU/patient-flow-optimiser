@@ -22,85 +22,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Mock function to simulate profile refresh
   const refreshProfile = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      
-      if (error) {
-        console.error("Error fetching profile:", error);
-        return;
-      }
-      
-      setProfile(data);
-    } catch (error) {
-      console.error("Error in refreshProfile:", error);
-    }
+    console.log("Mock profile refresh - not actually calling Supabase");
+    // We don't need to do anything here since we're bypassing authentication
   };
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("Auth state changed:", event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Use setTimeout to prevent lockup with auth state change
-          setTimeout(() => {
-            refreshProfile();
-          }, 0);
-        } else {
-          setProfile(null);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        refreshProfile();
-      }
-      
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
+  // Mock login function that accepts any credentials
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    console.log("Attempting login with:", email);
+    console.log("Mock login with:", email);
     
     try {
-      // Direct login without any signup attempts
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error("Login failed:", error);
-        throw error;
-      }
-
-      console.log("Login successful:", data.user?.email);
-      if (data.user) {
-        await refreshProfile();
-        toast.success(`Welcome back, ${data.user.email}!`);
-      }
+      // Create a mock user and profile
+      const mockUser = {
+        id: "mock-user-id",
+        email: email,
+        app_metadata: {},
+        user_metadata: {},
+        aud: "authenticated",
+        created_at: new Date().toISOString(),
+      } as User;
+      
+      const mockProfile = {
+        id: "mock-user-id",
+        name: email.split('@')[0],
+        email: email,
+        role: "admin", // Always grant admin role
+      } as Profile;
+      
+      // Set the mock user and profile
+      setUser(mockUser);
+      setProfile(mockProfile);
+      
+      toast.success(`Welcome back, ${email}!`);
+      console.log("Mock login successful:", email);
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -112,11 +70,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast.error(error.message);
-        throw error;
-      }
+      // Simply clear the user and profile states
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      toast.success("Logged out successfully");
     } catch (error) {
       console.error("Logout error:", error);
       throw error;
@@ -129,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     profile,
     session,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user, // This will be true after login
     isLoading,
     login,
     logout,
