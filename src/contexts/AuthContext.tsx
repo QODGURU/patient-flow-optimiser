@@ -81,57 +81,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     
-    // Special handling for demo accounts
-    const isDemoAccount = email === 'admin@example.com' || email === 'doctor@example.com';
-    
     try {
-      if (isDemoAccount && password === 'password123') {
-        // For demo accounts, attempt to sign up if sign in fails
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        
-        if (signInError) {
-          console.log("Sign in failed, trying to sign up demo account:", email);
-          
-          // Attempt to sign up the demo user
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                name: email === 'admin@example.com' ? 'Admin User' : 'Doctor User',
-                role: email === 'admin@example.com' ? 'admin' : 'doctor'
-              }
-            }
-          });
-          
-          if (signUpError) {
-            console.error("Failed to sign up demo user:", signUpError);
-            throw signUpError;
-          }
-          
-          // Try signing in again after sign up
-          const { error: retryError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          
-          if (retryError) {
-            throw retryError;
-          }
-        }
-      } else {
-        // Regular login for non-demo accounts
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      // Simple direct login - no signup attempts
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) {
-          throw error;
-        }
+      if (error) {
+        throw error;
       }
 
       await refreshProfile();
