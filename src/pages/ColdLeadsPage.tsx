@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,7 +44,7 @@ const ColdLeadsPage = () => {
       orderBy: { column: "created_at", ascending: false },
       limit: ITEMS_PER_PAGE,
       page: currentPage,
-      filters: isAdmin ? { status: ['Cold', 'opt-out'] } : { doctor_id: profile?.id || "", status: ['Cold', 'opt-out'] }
+      filters: isAdmin ? { status: ['Cold'] } : { doctor_id: profile?.id || "", status: ['Cold'] }
     });
 
   const { update } = useMutateSupabase();
@@ -71,7 +70,7 @@ const ColdLeadsPage = () => {
   const countByReason = {
     "no-response": coldLeads.filter(p => p.cold_reason === "no-response").length,
     "declined": coldLeads.filter(p => p.cold_reason === "declined").length,
-    "opt-out": coldLeads.filter(p => p.status === "opt-out").length,
+    "opt-out": coldLeads.filter(p => p.cold_reason === "opt-out").length,
     "invalid-contact": coldLeads.filter(p => p.cold_reason === "invalid-contact").length,
     "budget-constraints": coldLeads.filter(p => p.cold_reason === "budget-constraints").length
   };
