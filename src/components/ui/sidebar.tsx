@@ -16,7 +16,7 @@ import {
   Snowflake
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useMobileWidth } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarProps {
   children?: React.ReactNode;
@@ -26,7 +26,7 @@ export function Sidebar({ children }: SidebarProps) {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { t } = useLanguage();
-  const isMobile = useMobileWidth();
+  const isMobile = useIsMobile();
   
   const [isCollapsed, setIsCollapsed] = useState(isMobile);
 

@@ -48,7 +48,7 @@ const Layout = ({ children }: LayoutProps) => {
   const currentPath = location.pathname;
 
   const isLinkActive = (path: string) => {
-    return currentPath === path;
+    return currentPath.startsWith(path);
   };
 
   const NavLink = ({ to, icon, label, adminOnly = false }: 
@@ -148,9 +148,10 @@ const Layout = ({ children }: LayoutProps) => {
             </button>
           </div>
           <nav className="mt-4 px-2 space-y-1">
-            <NavLink to="/" icon={<Home />} label="Dashboard" />
+            <NavLink to="/dashboard" icon={<Home />} label="Dashboard" />
             <NavLink to="/patients" icon={<Users />} label="Patients" />
             <NavLink to="/add-patient" icon={<FilePlus />} label="Add Patient" />
+            <NavLink to="/cold-leads" icon={<Snowflake />} label="Cold Leads" />
             <NavLink to="/follow-ups" icon={<List />} label="Follow-ups" />
             
             {isAdmin && (

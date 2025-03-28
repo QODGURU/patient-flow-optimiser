@@ -22,19 +22,25 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="patients" element={<PatientsPage />} />
-            <Route path="patients/:id" element={<PatientDetailsPage />} />
-            <Route path="add-patient" element={<AddPatientPage />} />
-            <Route path="cold-leads" element={<ColdLeadsPage />} />
-            <Route path="doctors" element={<DoctorsPage />} />
-            <Route path="follow-ups" element={<FollowUpsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="admin" element={<ProtectedRoute adminOnly><AdminOnlyPage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="patients" element={<PatientsPage />} />
+                  <Route path="patients/:id" element={<PatientDetailsPage />} />
+                  <Route path="add-patient" element={<AddPatientPage />} />
+                  <Route path="cold-leads" element={<ColdLeadsPage />} />
+                  <Route path="doctors" element={<DoctorsPage />} />
+                  <Route path="follow-ups" element={<FollowUpsPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="admin" element={<ProtectedRoute adminOnly><AdminOnlyPage /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          } />
         </Routes>
       </Router>
     </AuthProvider>

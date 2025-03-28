@@ -155,6 +155,7 @@ const translations: Translations = {
     "error": "Error",
     "warning": "Warning",
     "info": "Info",
+    "coldLeads": "Cold Leads"
   },
   ar: {
     // Dashboard
@@ -204,7 +205,6 @@ const translations: Translations = {
     "female": "أنثى",
     "other": "آخر",
     "treatmentInformation": "معلومات العلاج",
-    "price": "السعر (درهم)",
     "thisPatientNeedsFollowUp": "هذا المريض يحتاج إلى متابعة",
     "clinicInformation": "معلومات العيادة",
     "assignedDoctor": "الطبيب المعين",
@@ -299,6 +299,7 @@ const translations: Translations = {
     "error": "خطأ",
     "warning": "تحذير",
     "info": "معلومات",
+    "coldLeads": "العملاء المحتملين الباردين"
   }
 };
 
