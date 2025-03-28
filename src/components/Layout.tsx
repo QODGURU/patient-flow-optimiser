@@ -4,7 +4,8 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useState, ReactNode, useEffect } from "react";
 import { 
   Users, LogOut, User, Settings, Home, 
-  FilePlus, List, BarChart, Menu, X, Bell
+  FilePlus, List, BarChart, Menu, X, Bell,
+  Snowflake
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
