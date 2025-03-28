@@ -368,7 +368,7 @@ const PatientsPage = () => {
                 <ChevronDown className="h-4 w-4 text-[#2B2E33]/40" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
+            <DropdownMenuContent className="w-56 max-h-[400px] overflow-y-auto">
               <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {allColumns.map((column) => (
@@ -387,9 +387,9 @@ const PatientsPage = () => {
 
       {/* Patients Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden border border-[#101B4C]/10">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[calc(100vh-240px)] overflow-y-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow>
                 {allColumns
                   .filter(column => visibleColumns.includes(column.id))
