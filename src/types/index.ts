@@ -6,35 +6,25 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  clinicName?: string;
+  phone?: string;
 }
 
-export type PatientStatus = 
-  | "pending" 
-  | "contacted" 
-  | "interested" 
-  | "booked" 
-  | "cold" 
-  | "opt-out";
+export type PatientStatus = "pending" | "contacted" | "interested" | "booked" | "cold" | "opt-out";
 
-export type FollowUpChannel = "call" | "sms" | "email" | "message";
+export type FollowUpType = "call" | "message";
+export type FollowUpResponse = "yes" | "no" | "maybe" | "call_again" | null;
 
-export type FollowUpResponse = 
-  | "yes" 
-  | "no" 
-  | "maybe" 
-  | "call_again" 
-  | null;
+export interface TimeSlotSettings {
+  startTime: string;
+  endTime: string;
+  excludedDays: string[];
+}
 
-export type FollowUpDisposition = 
-  | "answered" 
-  | "no_answer" 
-  | "busy" 
-  | "failed";
-
-export type PreferredTimeSlot = 
-  | "morning" 
-  | "afternoon" 
-  | "evening";
+export interface LanguageSettings {
+  primary: "en" | "ar";
+  enableTranslation: boolean;
+}
 
 export interface Patient {
   id: string;
@@ -43,77 +33,60 @@ export interface Patient {
   gender: "male" | "female" | "other";
   phone: string;
   email?: string;
-  clinicName: string;
   doctorId: string;
+  clinicName: string;
   treatment: string;
   price: number;
-  needsFollowUp: boolean;
   status: PatientStatus;
-  createdAt: string;
+  lastContactDate?: string;
+  coldReason?: string;
   notes?: string;
-  
-  // Enhanced fields
-  leadSource?: "consultation" | "website" | "referral" | "csv_upload";
-  lastFollowUpDate?: string;
-  followUpCount?: number;
-  leadPriority?: "high" | "medium" | "low";
-  optOutStatus?: boolean;
-  preferredChannel?: FollowUpChannel;
-  preferredTimeSlot?: PreferredTimeSlot;
-  availableDays?: string[];
-  consentTimestamp?: string;
-  aiDisclosureAccepted?: boolean;
-  coldLeadReason?: string;
-  lastModifiedBy?: string;
-  lastModifiedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface FollowUp {
   id: string;
   patientId: string;
-  type: FollowUpChannel;
+  type: FollowUpType;
   date: string;
   time: string;
-  response: FollowUpResponse;
   notes?: string;
-  transcript?: string;
-  
-  // Enhanced fields
-  scheduledTime?: string;
-  actualTime?: string;
-  sessionId?: string;
-  disposition?: FollowUpDisposition;
-  scriptVersion?: string;
-  callDuration?: number;
-  cost?: number;
+  response: FollowUpResponse;
+  followUpDate?: string;
 }
 
 export interface Doctor {
   id: string;
   name: string;
   email: string;
+  phone: string;
   clinicName: string;
+  specialty: string;
+  patientCount: number;
+  convertedCount: number;
 }
 
-export interface Script {
+export interface TreatmentType {
   id: string;
   name: string;
-  treatment: string;
+  category: string;
+  defaultScript?: string;
+}
+
+export interface ScriptTemplate {
+  id: string;
+  name: string;
+  type: "call" | "sms" | "email";
+  treatmentCategory: string;
   content: string;
-  version: string;
-  createdAt: string;
-  createdBy: string;
-  lastModifiedAt?: string;
-  lastModifiedBy?: string;
+  variables: string[];
+  isDefault: boolean;
 }
 
-export interface TimeSlotSettings {
-  startTime: string; // 24-hour format, e.g. "09:00"
-  endTime: string; // 24-hour format, e.g. "17:00"
-  excludedDays: string[]; // e.g. ["Friday", "Saturday"]
-}
-
-export interface LanguageSettings {
-  primary: "en" | "ar";
-  enableTranslation: boolean;
+export interface ImportValidationResult {
+  totalRows: number;
+  validRows: number;
+  errors: string[];
+  data?: Patient[];
 }

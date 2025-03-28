@@ -1,136 +1,44 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { useEffect } from "react";
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { useState } from "react";
-import LanguageSelector from "./components/LanguageSelector";
-
-// Pages
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import PatientsPage from "./pages/PatientsPage";
 import PatientDetailsPage from "./pages/PatientDetailsPage";
 import AddPatientPage from "./pages/AddPatientPage";
-import FollowUpsPage from "./pages/FollowUpsPage";
 import DoctorsPage from "./pages/DoctorsPage";
+import FollowUpsPage from "./pages/FollowUpsPage";
 import SettingsPage from "./pages/SettingsPage";
-import AdminOnlyPage from "./pages/AdminOnlyPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import AdminOnlyPage from "./pages/AdminOnlyPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ColdLeadsPage from "./pages/ColdLeadsPage";
+import { AuthProvider } from "./contexts/AuthContext";
 
-const App = () => {
-  // Create a new QueryClient for each component instance
-  const [queryClient] = useState(() => new QueryClient());
-
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <DashboardPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/patients"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <PatientsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/patients/:id"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <PatientDetailsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/add-patient"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <AddPatientPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/follow-ups"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <FollowUpsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/doctors"
-                element={
-                  <ProtectedRoute adminOnly>
-                    <Layout>
-                      <DoctorsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <SettingsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute adminOnly>
-                    <Layout>
-                      <AdminOnlyPage />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="patients" element={<PatientsPage />} />
+            <Route path="patients/:id" element={<PatientDetailsPage />} />
+            <Route path="add-patient" element={<AddPatientPage />} />
+            <Route path="cold-leads" element={<ColdLeadsPage />} />
+            <Route path="doctors" element={<DoctorsPage />} />
+            <Route path="follow-ups" element={<FollowUpsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="admin" element={<ProtectedRoute adminOnly><AdminOnlyPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
-};
+}
 
 export default App;

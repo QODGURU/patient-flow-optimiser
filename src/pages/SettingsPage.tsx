@@ -31,15 +31,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const SettingsPage = () => {
-  const [language, setLanguage] = useState<LanguageSettings>({
-    primary: "en",
+  const { t, language, setLanguage } = useLanguage();
+  
+  const [languageSettings, setLanguageSettings] = useState<LanguageSettings>({
+    primary: language,
     enableTranslation: true,
   });
 
   const handleTimeSettingsChange = (settings: TimeSlotSettings) => {
     console.log("Time settings updated:", settings);
+    toast.success(t("settingsSaved"));
     // In a real app, this would save to backend
   };
 
@@ -49,48 +53,43 @@ const SettingsPage = () => {
   };
 
   const handleLanguageChange = (lang: "en" | "ar") => {
-    setLanguage((prev) => ({
+    setLanguageSettings((prev) => ({
       ...prev,
       primary: lang,
     }));
-    toast.success(`Language set to ${lang === "en" ? "English" : "العربية"}`);
     
-    // In a real app, this would change the app's language
-    document.documentElement.lang = lang;
-    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+    setLanguage(lang);
+    toast.success(lang === "en" ? "Language set to English" : "تم تعيين اللغة إلى العربية");
   };
 
   const toggleTranslation = (enabled: boolean) => {
-    setLanguage((prev) => ({
+    setLanguageSettings((prev) => ({
       ...prev,
       enableTranslation: enabled,
     }));
     
-    toast.success(`Automatic translation ${enabled ? "enabled" : "disabled"}`);
+    toast.success(enabled ? t("autoTranslationEnabled") : t("autoTranslationDisabled"));
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("settings")}</h1>
       </div>
 
       <Tabs defaultValue="time" className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full">
           <TabsTrigger value="time" className="flex items-center">
-            <Clock className="h-4 w-4 mr-2" /> Outreach Time
+            <Clock className="h-4 w-4 mr-2" /> {t("outreachTime")}
           </TabsTrigger>
           <TabsTrigger value="import" className="flex items-center">
-            <Upload className="h-4 w-4 mr-2" /> Import
+            <Upload className="h-4 w-4 mr-2" /> {t("import")}
           </TabsTrigger>
           <TabsTrigger value="language" className="flex items-center">
-            <Languages className="h-4 w-4 mr-2" /> Language
+            <Languages className="h-4 w-4 mr-2" /> {t("language")}
           </TabsTrigger>
           <TabsTrigger value="communication" className="flex items-center">
-            <MessageSquare className="h-4 w-4 mr-2" /> Scripts
-          </TabsTrigger>
-          <TabsTrigger value="compliance" className="flex items-center">
-            <Shield className="h-4 w-4 mr-2" /> Compliance
+            <MessageSquare className="h-4 w-4 mr-2" /> {t("scripts")}
           </TabsTrigger>
         </TabsList>
 
@@ -103,20 +102,20 @@ const SettingsPage = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Upload className="mr-2 h-5 w-5 text-primary" />
-                Import Patients
+                {t("importPatients")}
               </CardTitle>
               <CardDescription>
-                Upload CSV or Excel files to bulk import patient records
+                {t("uploadCSVorExcel")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-1">
-                <h3 className="text-sm font-medium">File Requirements</h3>
+                <h3 className="text-sm font-medium">{t("fileRequirements")}</h3>
                 <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1">
-                  <li>File must be .csv, .xlsx, or .xls format</li>
-                  <li>Required columns: Name, Phone, Treatment, Price</li>
-                  <li>Phone numbers must be in UAE format (+971...)</li>
-                  <li>Maximum 1000 records per file</li>
+                  <li>{t("fileFormatRequirement")}</li>
+                  <li>{t("requiredColumns")}</li>
+                  <li>{t("phoneNumberFormat")}</li>
+                  <li>{t("maxRecords")}</li>
                 </ul>
               </div>
               
@@ -127,7 +126,7 @@ const SettingsPage = () => {
               />
               
               <div className="text-xs text-muted-foreground mt-4">
-                <p>Need a template? <a href="#" className="text-primary hover:underline">Download sample file</a></p>
+                <p>{t("needTemplate")} <a href="/templates/patient_import_template.xlsx" download className="text-primary hover:underline">{t("downloadSampleFile")}</a></p>
               </div>
             </CardContent>
           </Card>
@@ -138,7 +137,7 @@ const SettingsPage = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Languages className="mr-2 h-5 w-5 text-primary" />
-                Language Settings
+                {t("language")}
               </CardTitle>
               <CardDescription>
                 Configure language preferences and translation settings
@@ -148,7 +147,7 @@ const SettingsPage = () => {
               <div className="space-y-3">
                 <Label htmlFor="primaryLanguage">Primary Interface Language</Label>
                 <Select
-                  value={language.primary}
+                  value={languageSettings.primary}
                   onValueChange={(value: "en" | "ar") => handleLanguageChange(value)}
                 >
                   <SelectTrigger id="primaryLanguage" className="w-full sm:w-64">
@@ -168,7 +167,7 @@ const SettingsPage = () => {
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="enableTranslation" 
-                    checked={language.enableTranslation}
+                    checked={languageSettings.enableTranslation}
                     onCheckedChange={(checked) => {
                       if (typeof checked === 'boolean') {
                         toggleTranslation(checked);
@@ -192,46 +191,46 @@ const SettingsPage = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <MessageSquare className="mr-2 h-5 w-5 text-primary" />
-                Communication Scripts
+                {t("communicationScripts")}
               </CardTitle>
               <CardDescription>
-                Customize follow-up messages and call scripts
+                {t("customizeFollowUpMessages")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <Label htmlFor="scriptType">Script Type</Label>
+                <Label htmlFor="scriptType">{t("scriptType")}</Label>
                 <Select defaultValue="sms">
                   <SelectTrigger id="scriptType" className="w-full sm:w-64">
-                    <SelectValue placeholder="Select script type" />
+                    <SelectValue placeholder={t("selectScriptType")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sms">SMS Template</SelectItem>
-                    <SelectItem value="voice">Voice Call Script</SelectItem>
-                    <SelectItem value="email">Email Template</SelectItem>
+                    <SelectItem value="sms">{t("smsTemplate")}</SelectItem>
+                    <SelectItem value="voice">{t("voiceCallScript")}</SelectItem>
+                    <SelectItem value="email">{t("emailTemplate")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-3">
-                <Label htmlFor="treatmentType">Treatment Category</Label>
+                <Label htmlFor="treatmentType">{t("treatmentCategory")}</Label>
                 <Select defaultValue="dental">
                   <SelectTrigger id="treatmentType" className="w-full sm:w-64">
-                    <SelectValue placeholder="Select treatment" />
+                    <SelectValue placeholder={t("selectTreatment")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dental">Dental</SelectItem>
-                    <SelectItem value="cosmetic">Cosmetic</SelectItem>
-                    <SelectItem value="fertility">Fertility</SelectItem>
-                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="dental">{t("dental")}</SelectItem>
+                    <SelectItem value="cosmetic">{t("cosmetic")}</SelectItem>
+                    <SelectItem value="fertility">{t("fertility")}</SelectItem>
+                    <SelectItem value="general">{t("general")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="scriptContent">Script Content</Label>
+                <Label htmlFor="scriptContent">{t("scriptContent")}</Label>
                 <div className="text-xs text-muted-foreground mb-2">
-                  Available variables: {"{name}"}, {"{clinic}"}, {"{treatment}"}, {"{price}"}
+                  {t("availableVariables")}: {"{name}"}, {"{clinic}"}, {"{treatment}"}, {"{price}"}
                 </div>
                 <textarea
                   id="scriptContent"
@@ -242,85 +241,8 @@ const SettingsPage = () => {
               </div>
               
               <div className="pt-4 flex justify-end space-x-2">
-                <Button variant="outline">Reset to Default</Button>
-                <Button>Save Script</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="compliance">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Shield className="mr-2 h-5 w-5 text-primary" />
-                Compliance Settings
-              </CardTitle>
-              <CardDescription>
-                Configure privacy and compliance settings for patient communications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="aiDisclosure" defaultChecked />
-                  <Label htmlFor="aiDisclosure">
-                    Enable AI disclosure message
-                  </Label>
-                </div>
-                <p className="text-xs text-muted-foreground pl-5">
-                  When enabled, all AI voice calls will begin with "This is an automated call from [Clinic Name]"
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="optOutMessage" defaultChecked />
-                  <Label htmlFor="optOutMessage">
-                    Include opt-out instructions in messages
-                  </Label>
-                </div>
-                <p className="text-xs text-muted-foreground pl-5">
-                  Add "Reply STOP to opt-out" to all SMS communications
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <Label htmlFor="maxAttempts">Maximum Contact Attempts</Label>
-                <Select defaultValue="3">
-                  <SelectTrigger id="maxAttempts" className="w-full sm:w-64">
-                    <SelectValue placeholder="Select max attempts" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 attempt</SelectItem>
-                    <SelectItem value="2">2 attempts</SelectItem>
-                    <SelectItem value="3">3 attempts</SelectItem>
-                    <SelectItem value="5">5 attempts</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  After reaching maximum attempts, leads will be marked as "Cold"
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <Label htmlFor="consentRequirement">Consent Requirement</Label>
-                <Select defaultValue="explicit">
-                  <SelectTrigger id="consentRequirement" className="w-full sm:w-64">
-                    <SelectValue placeholder="Select consent type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="explicit">Explicit consent only</SelectItem>
-                    <SelectItem value="implied">Allow implied consent</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  "Explicit" requires documented patient consent before follow-up
-                </p>
-              </div>
-              
-              <div className="pt-4 flex justify-end">
-                <Button>Save Compliance Settings</Button>
+                <Button variant="outline">{t("resetToDefault")}</Button>
+                <Button>{t("saveScript")}</Button>
               </div>
             </CardContent>
           </Card>

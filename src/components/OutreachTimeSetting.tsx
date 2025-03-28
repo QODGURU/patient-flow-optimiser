@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Clock } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const daysOfWeek = [
   "Sunday",
@@ -38,6 +39,7 @@ const OutreachTimeSetting = ({
   },
   onSave,
 }: OutreachTimeSettingProps) => {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState<TimeSlotSettings>(initialSettings);
 
   const handleTimeChange = (field: "startTime" | "endTime", value: string) => {
@@ -79,7 +81,7 @@ const OutreachTimeSetting = ({
       onSave(settings);
     }
     
-    toast.success("Outreach time settings saved successfully");
+    toast.success(t("outreachTimeSettingsSaved"));
   };
 
   return (
@@ -87,16 +89,16 @@ const OutreachTimeSetting = ({
       <CardHeader>
         <CardTitle className="flex items-center">
           <Clock className="mr-2 h-5 w-5 text-primary" />
-          Outreach Time Settings
+          {t("outreachTimeSettings")}
         </CardTitle>
         <CardDescription>
-          Set the time range for patient follow-ups and excluded days
+          {t("setTimeRangeForPatient")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="startTime">Start Time</Label>
+            <Label htmlFor="startTime">{t("startTime")}</Label>
             <Input
               id="startTime"
               type="time"
@@ -104,12 +106,12 @@ const OutreachTimeSetting = ({
               onChange={(e) => handleTimeChange("startTime", e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Earliest time to contact patients
+              {t("earliestTimeToContact")}
             </p>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="endTime">End Time</Label>
+            <Label htmlFor="endTime">{t("endTime")}</Label>
             <Input
               id="endTime"
               type="time"
@@ -117,13 +119,13 @@ const OutreachTimeSetting = ({
               onChange={(e) => handleTimeChange("endTime", e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Latest time to contact patients
+              {t("latestTimeToContact")}
             </p>
           </div>
         </div>
 
         <div className="space-y-3">
-          <Label>Excluded Days</Label>
+          <Label>{t("excludedDays")}</Label>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {daysOfWeek.map((day) => (
               <div key={day} className="flex items-center space-x-2">
@@ -142,13 +144,13 @@ const OutreachTimeSetting = ({
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            System will not send follow-ups on these days
+            {t("systemWillNotSendFollowUps")}
           </p>
         </div>
 
         <div className="pt-4 flex justify-end">
           <Button onClick={saveSettings}>
-            Save Settings
+            {t("saveSettings")}
           </Button>
         </div>
       </CardContent>
