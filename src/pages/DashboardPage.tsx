@@ -1,8 +1,7 @@
-
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, PhoneCall, MessageSquare, Star, Thumbs, AlertTriangle, Calendar } from "lucide-react";
+import { Users, PhoneCall, MessageSquare, Star, ThumbsUp, AlertTriangle, Calendar } from "lucide-react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { Patient, FollowUp } from "@/types/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -405,7 +404,13 @@ const DashboardPage = () => {
                       tickFormatter={(value) => `${value}%`}
                     />
                     <Tooltip 
-                      formatter={(value) => [`${value.toFixed(1)}%`, "Conversion Rate"]}
+                      formatter={(value) => {
+                        // Check if value is a number before calling toFixed
+                        return [
+                          typeof value === 'number' ? `${value.toFixed(1)}%` : `${value}%`, 
+                          "Conversion Rate"
+                        ]
+                      }}
                       contentStyle={{ 
                         backgroundColor: '#FDFDFD', 
                         borderColor: '#101B4C20',
