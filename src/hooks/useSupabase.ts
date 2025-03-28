@@ -56,9 +56,9 @@ export function useSupabaseQuery<T>(
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
-            filteredCountQuery = filteredCountQuery.in(key, value);
+            filteredCountQuery = filteredCountQuery.in(key, value) as typeof filteredCountQuery;
           } else {
-            filteredCountQuery = filteredCountQuery.eq(key, value);
+            filteredCountQuery = filteredCountQuery.eq(key, value) as typeof filteredCountQuery;
           }
         }
       });
@@ -77,9 +77,9 @@ export function useSupabaseQuery<T>(
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
-            query = query.in(key, value);
+            query = query.in(key, value) as typeof query;
           } else {
-            query = query.eq(key, value);
+            query = query.eq(key, value) as typeof query;
           }
         }
       });
@@ -128,7 +128,7 @@ export function useMutateSupabase() {
     try {
       const { data: result, error } = await supabase
         .from(tableName)
-        .insert(data)
+        .insert(data as any)
         .select();
 
       if (error) throw error;
@@ -151,7 +151,7 @@ export function useMutateSupabase() {
     try {
       const { data: result, error } = await supabase
         .from(tableName)
-        .update(data)
+        .update(data as any)
         .eq('id', id)
         .select();
 
