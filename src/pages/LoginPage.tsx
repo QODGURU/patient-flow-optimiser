@@ -7,14 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, KeyRound } from "lucide-react";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, bypassAuth, isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // Redirect if already authenticated
+  if (isAuthenticated) {
+    navigate("/dashboard");
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,11 +28,20 @@ const LoginPage = () => {
     
     try {
       await login(email, password);
-      toast.success(`Welcome back!`);
       navigate("/dashboard");
     } catch (error: any) {
       setError(error.message || "Failed to login");
       console.error("Login error:", error);
+    }
+  };
+
+  const handleBypass = async () => {
+    try {
+      await bypassAuth();
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Bypass error:", error);
+      toast.error("Failed to bypass authentication");
     }
   };
 
@@ -92,13 +107,24 @@ const LoginPage = () => {
                 />
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-3">
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-to-r from-[#101B4C] to-[#00FFC8] hover:opacity-90"
                 disabled={isLoading}
               >
                 {isLoading ? "Logging in..." : "Login"}
+              </Button>
+              
+              {/* Bypass authentication button - for testing purposes */}
+              <Button 
+                type="button" 
+                variant="outline"
+                className="w-full border-dashed border-gray-300 text-gray-500 flex items-center gap-2"
+                onClick={handleBypass}
+              >
+                <KeyRound size={16} />
+                <span>Bypass Authentication (Admin Access)</span>
               </Button>
             </CardFooter>
           </form>

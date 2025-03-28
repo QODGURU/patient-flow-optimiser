@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { toast } from "sonner";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMutateSupabase } from "@/hooks/useSupabase";
 import { Patient } from "@/types/supabase";
 import FileUploader from "@/components/FileUploader";
-import { DownloadCloud } from "lucide-react";
+import { DownloadCloud, FileSpreadsheet, AlertCircle } from "lucide-react";
 import * as XLSX from 'xlsx';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface BulkImportPatientsProps {
   onSuccess: () => void;
@@ -23,80 +24,151 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
   const { t } = useLanguage();
   const { profile } = useAuth();
   const { insert } = useMutateSupabase();
+  const [importStatus, setImportStatus] = useState<{
+    processing: boolean;
+    success: number;
+    error: number;
+    total: number;
+  }>({
+    processing: false,
+    success: 0,
+    error: 0,
+    total: 0
+  });
 
   const handleFileAccepted = async (file: File) => {
     console.log("File accepted:", file.name);
     toast.success(`${file.name} uploaded successfully. Processing...`);
     
+    setImportStatus({
+      processing: true,
+      success: 0,
+      error: 0,
+      total: 0
+    });
+    
     try {
       const reader = new FileReader();
       
       reader.onload = async (e) => {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, {type: 'array'});
-        
-        // Get first worksheet
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        
-        // Convert to JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        
-        if (jsonData.length === 0) {
-          toast.error("No data found in the file");
-          return;
-        }
-        
-        // Process records
-        let successCount = 0;
-        let errorCount = 0;
-        
-        for (const record of jsonData) {
-          try {
-            // Map spreadsheet columns to database fields
-            const patientData: Partial<Patient> = {
-              name: record['Patient Name'],
-              age: record['Age'] ? Number(record['Age']) : null,
-              gender: record['Gender'],
-              phone: record['Phone'],
-              email: record['Email'] || null,
-              treatment_category: record['Treatment Category'] || null,
-              treatment_type: record['Treatment Type'] || null,
-              price: record['Price (AED)'] ? Number(record['Price (AED)']) : null,
-              follow_up_required: record['Follow-Up Required'] === 'Yes',
-              status: record['Status'] || 'Pending',
-              preferred_time: record['Preferred Follow-Up Time'] as any || null,
-              preferred_channel: record['Preferred Channel'] as any || null,
-              availability_preferences: record['Availability Preferences'] || null,
-              notes: record['Notes'] || null,
-              script: record['Script'] || null,
-              doctor_id: profile?.id,
-              clinic_id: profile?.clinic_id,
-              last_modified_by: profile?.id,
-            };
-            
-            await insert<Patient>("patients", patientData);
-            successCount++;
-          } catch (err) {
-            console.error("Error inserting record:", err, record);
-            errorCount++;
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, {type: 'array'});
+          
+          // Get first worksheet
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          
+          // Convert to JSON
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          
+          if (jsonData.length === 0) {
+            toast.error("No data found in the file");
+            setImportStatus(prev => ({...prev, processing: false}));
+            return;
           }
+          
+          console.log("Parsed data from Excel:", jsonData);
+          
+          // Update total count
+          setImportStatus(prev => ({...prev, total: jsonData.length}));
+          
+          // Process records
+          let successCount = 0;
+          let errorCount = 0;
+          
+          for (const record of jsonData) {
+            try {
+              console.log("Processing record:", record);
+              
+              // Map spreadsheet columns to database fields
+              const patientData: Partial<Patient> = {
+                name: record['Patient Name'] || record['Name'],
+                age: record['Age'] ? Number(record['Age']) : null,
+                gender: record['Gender'],
+                phone: record['Phone'] || record['Phone Number'],
+                email: record['Email'] || null,
+                treatment_category: record['Treatment Category'] || null,
+                treatment_type: record['Treatment Type'] || record['Treatment'] || null,
+                price: record['Price (AED)'] || record['Price'] ? Number(record['Price (AED)'] || record['Price']) : null,
+                follow_up_required: record['Follow-Up Required'] === 'Yes' || record['Follow Up'] === 'Yes',
+                status: record['Status'] || 'Pending',
+                preferred_time: record['Preferred Follow-Up Time'] || record['Preferred Time'] as any || null,
+                preferred_channel: record['Preferred Channel'] as any || null,
+                availability_preferences: record['Availability Preferences'] || record['Availability'] || null,
+                notes: record['Notes'] || null,
+                script: record['Script'] || null,
+                doctor_id: profile?.id,
+                clinic_id: profile?.clinic_id || record['Clinic ID'] || null,
+                last_modified_by: profile?.id,
+                // Ensure required fields have values
+                // If name or phone is missing, skip this record
+                ...((!record['Patient Name'] && !record['Name']) && {_skipRecord: true}),
+                ...((!record['Phone'] && !record['Phone Number']) && {_skipRecord: true}),
+              };
+              
+              // Skip records missing required fields
+              if ((patientData as any)._skipRecord) {
+                console.warn("Skipping record due to missing required fields:", record);
+                errorCount++;
+                continue;
+              }
+              
+              // Remove any temporary fields
+              delete (patientData as any)._skipRecord;
+              
+              console.log("Inserting patient data:", patientData);
+              await insert<Patient>("patients", patientData);
+              successCount++;
+              
+              // Update counts as we progress
+              setImportStatus(prev => ({
+                ...prev, 
+                success: prev.success + 1,
+                error: errorCount
+              }));
+            } catch (err) {
+              console.error("Error inserting record:", err, record);
+              errorCount++;
+              
+              // Update error count
+              setImportStatus(prev => ({
+                ...prev, 
+                error: prev.error + 1
+              }));
+            }
+          }
+          
+          setImportStatus(prev => ({
+            ...prev, 
+            processing: false,
+            success: successCount,
+            error: errorCount
+          }));
+          
+          if (successCount > 0) {
+            toast.success(`${successCount} patients imported successfully`);
+          }
+          
+          if (errorCount > 0) {
+            toast.error(`${errorCount} patients failed to import`);
+          }
+          
+          // Only call onSuccess if at least one record was successfully imported
+          if (successCount > 0) {
+            setTimeout(() => onSuccess(), 2000);
+          }
+        } catch (error) {
+          console.error("Error processing Excel file:", error);
+          toast.error("Error parsing Excel file. Please check the format.");
+          setImportStatus(prev => ({...prev, processing: false}));
         }
-        
-        if (successCount > 0) {
-          toast.success(`${successCount} patients imported successfully`);
-        }
-        
-        if (errorCount > 0) {
-          toast.error(`${errorCount} patients failed to import`);
-        }
-        
-        onSuccess();
       };
       
       reader.readAsArrayBuffer(file);
     } catch (error) {
       console.error("Error processing file:", error);
       toast.error("Error processing file");
+      setImportStatus(prev => ({...prev, processing: false}));
     }
   };
 
@@ -123,14 +195,48 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
           </ul>
         </div>
         
-        <FileUploader 
-          onFileAccepted={handleFileAccepted}
-          allowedFileTypes={[".csv", ".xlsx", ".xls"]}
-          maxSizeMB={10}
-          onValidationComplete={(isValid, data) => {
-            console.log("Validation complete:", isValid, data);
-          }}
-        />
+        {importStatus.processing ? (
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 border-t-4 border-medical-teal border-solid rounded-full animate-spin"></div>
+            </div>
+            <p className="text-center text-sm">
+              Processing {importStatus.total} records...<br />
+              <span className="text-green-600">{importStatus.success} successful</span> • 
+              <span className="text-red-600">{importStatus.error} failed</span>
+            </p>
+          </div>
+        ) : (
+          <FileUploader 
+            onFileAccepted={handleFileAccepted}
+            allowedFileTypes={[".csv", ".xlsx", ".xls"]}
+            maxSizeMB={10}
+            onValidationComplete={(isValid, data) => {
+              console.log("Validation complete:", isValid, data);
+            }}
+          />
+        )}
+        
+        {importStatus.success > 0 && !importStatus.processing && (
+          <Alert className="bg-green-50 border-green-200">
+            <FileSpreadsheet className="h-4 w-4 text-green-600" />
+            <AlertTitle>Import Successful</AlertTitle>
+            <AlertDescription>
+              Successfully imported {importStatus.success} patients to the database.
+              {importStatus.error > 0 && ` ${importStatus.error} records failed to import.`}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {importStatus.error > 0 && importStatus.success === 0 && !importStatus.processing && (
+          <Alert className="bg-red-50 border-red-200">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertTitle>Import Failed</AlertTitle>
+            <AlertDescription>
+              All {importStatus.error} records failed to import. Please check the file format.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="mt-4 flex justify-center">
           <Button 
@@ -154,6 +260,7 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
         <Button 
           className="bg-medical-teal hover:bg-teal-600"
           onClick={onSuccess}
+          disabled={importStatus.processing}
         >
           Back to Patients
         </Button>

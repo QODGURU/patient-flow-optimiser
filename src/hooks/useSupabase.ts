@@ -46,6 +46,8 @@ export function useSupabaseQuery<T>(
     setError(null);
 
     try {
+      console.log(`Fetching data from ${tableName} table with filters:`, filters);
+      
       // Get count first
       const countQuery = supabase
         .from(tableName)
@@ -101,6 +103,7 @@ export function useSupabaseQuery<T>(
 
       if (fetchError) throw fetchError;
       
+      console.log(`Retrieved ${fetchedData?.length || 0} rows from ${tableName}:`, fetchedData);
       setData(fetchedData as T[]);
     } catch (err) {
       console.error("Supabase query error:", err);
@@ -127,13 +130,19 @@ export function useMutateSupabase() {
     setError(null);
 
     try {
+      console.log(`Inserting data into ${tableName}:`, data);
+      
       const { data: result, error } = await supabase
         .from(tableName)
         .insert(data as any)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Error inserting into ${tableName}:`, error);
+        throw error;
+      }
       
+      console.log(`Successfully inserted into ${tableName}:`, result);
       return result;
     } catch (err) {
       console.error("Insert error:", err);
@@ -150,14 +159,20 @@ export function useMutateSupabase() {
     setError(null);
 
     try {
+      console.log(`Updating data in ${tableName} for id ${id}:`, data);
+      
       const { data: result, error } = await supabase
         .from(tableName)
         .update(data as any)
         .eq('id', id)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Error updating ${tableName}:`, error);
+        throw error;
+      }
       
+      console.log(`Successfully updated ${tableName}:`, result);
       return result;
     } catch (err) {
       console.error("Update error:", err);
@@ -174,13 +189,19 @@ export function useMutateSupabase() {
     setError(null);
 
     try {
+      console.log(`Deleting data from ${tableName} for id ${id}`);
+      
       const { error } = await supabase
         .from(tableName)
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Error deleting from ${tableName}:`, error);
+        throw error;
+      }
       
+      console.log(`Successfully deleted from ${tableName} for id ${id}`);
       return true;
     } catch (err) {
       console.error("Delete error:", err);

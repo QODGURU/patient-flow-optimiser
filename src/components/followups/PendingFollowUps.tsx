@@ -2,6 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FollowUpItem } from "./FollowUpItem";
 import { FollowUp } from "@/types";
+import { Loader2 } from "lucide-react";
 
 interface PendingFollowUpsProps {
   followUps: Array<FollowUp & {
@@ -9,9 +10,10 @@ interface PendingFollowUpsProps {
     clinicName: string;
     doctorId?: string;
   }>;
+  isLoading?: boolean;
 }
 
-export const PendingFollowUps = ({ followUps }: PendingFollowUpsProps) => {
+export const PendingFollowUps = ({ followUps, isLoading = false }: PendingFollowUpsProps) => {
   return (
     <Card>
       <CardHeader>
@@ -21,7 +23,11 @@ export const PendingFollowUps = ({ followUps }: PendingFollowUpsProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {followUps.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          </div>
+        ) : followUps.length > 0 ? (
           <div className="space-y-4">
             {followUps.map((followUp) => (
               <FollowUpItem key={followUp.id} followUp={followUp} />

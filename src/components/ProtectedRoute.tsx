@@ -8,17 +8,31 @@ interface ProtectedRouteProps {
   adminOnly?: boolean;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  // We'll still use the auth context, but we'll ignore its actual state
-  const { isLoading } = useAuth();
+const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading, profile } = useAuth();
 
-  // Simply render the children without any authentication checks
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      // Redirect to login if not authenticated
+      navigate("/login");
+    } else if (!isLoading && isAuthenticated && adminOnly && profile?.role !== "admin") {
+      // Redirect to dashboard if not admin but trying to access admin-only route
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, adminOnly, profile, navigate]);
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  // Always render the children, bypassing all authentication checks
-  return <>{children}</>;
+  // Allow rendering only if authenticated (and is admin if adminOnly is true)
+  if (isAuthenticated && (!adminOnly || (adminOnly && profile?.role === "admin"))) {
+    return <>{children}</>;
+  }
+
+  // This will briefly show before the redirect happens
+  return null;
 };
 
 export default ProtectedRoute;

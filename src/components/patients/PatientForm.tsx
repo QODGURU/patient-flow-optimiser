@@ -47,17 +47,19 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   const onSubmit = async (values: PatientFormValues) => {
     setIsSubmitting(true);
+    console.log("Submitting form with values:", values);
+    
     try {
       // Transform the data to match the patient table structure
       const patientData: Partial<Patient> = {
         name: values.name,
-        age: values.age !== null ? values.age : null,
+        age: values.age !== undefined && values.age !== null ? Number(values.age) : null,
         gender: values.gender,
         phone: values.phone,
         email: values.email || null,
         treatment_category: values.treatment_category || null,
         treatment_type: values.treatment_type || null,
-        price: values.price !== null ? values.price : null,
+        price: values.price !== undefined && values.price !== null ? Number(values.price) : null,
         doctor_id: values.doctor_id || profile?.id || null,
         clinic_id: values.clinic_id || profile?.clinic_id || null,
         follow_up_required: values.follow_up_required,
@@ -70,7 +72,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         last_modified_by: profile?.id,
       };
 
-      await insert<Patient>("patients", patientData);
+      console.log("Sending patient data to Supabase:", patientData);
+      
+      const result = await insert<Patient>("patients", patientData);
+      console.log("Insert result:", result);
       
       toast.success(t("patientAddedSuccessfully"));
       onSuccess();

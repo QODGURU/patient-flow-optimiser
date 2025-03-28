@@ -14,6 +14,7 @@ interface AuthContextProps {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  bypassAuth: () => Promise<void>; // Added bypass function for testing
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -22,43 +23,93 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock function to simulate profile refresh
-  const refreshProfile = async () => {
-    console.log("Mock profile refresh - not actually calling Supabase");
-    // We don't need to do anything here since we're bypassing authentication
+  // Initialize auth state
+  useEffect(() => {
+    const initAuth = async () => {
+      setIsLoading(true);
+      
+      // Check for existing session
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      
+      if (initialSession) {
+        setSession(initialSession);
+        setUser(initialSession.user);
+        await fetchProfile(initialSession.user.id);
+      }
+      
+      setIsLoading(false);
+      
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, newSession) => {
+          console.log("Auth state changed:", event);
+          
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
+          
+          if (newSession?.user) {
+            await fetchProfile(newSession.user.id);
+          } else {
+            setProfile(null);
+          }
+        }
+      );
+      
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
+    
+    initAuth();
+  }, []);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return;
+      }
+      
+      if (data) {
+        setProfile(data as Profile);
+        console.log("Fetched profile:", data);
+      }
+    } catch (error) {
+      console.error("Error in fetchProfile:", error);
+    }
   };
 
-  // Mock login function that accepts any credentials
+  const refreshProfile = async () => {
+    if (!user) return;
+    await fetchProfile(user.id);
+  };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    console.log("Mock login with:", email);
     
     try {
-      // Create a mock user and profile
-      const mockUser = {
-        id: "mock-user-id",
-        email: email,
-        app_metadata: {},
-        user_metadata: {},
-        aud: "authenticated",
-        created_at: new Date().toISOString(),
-      } as User;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      const mockProfile = {
-        id: "mock-user-id",
-        name: email.split('@')[0],
-        email: email,
-        role: "admin", // Always grant admin role
-      } as Profile;
+      if (error) {
+        toast.error(error.message || "Failed to login");
+        throw error;
+      }
       
-      // Set the mock user and profile
-      setUser(mockUser);
-      setProfile(mockProfile);
-      
-      toast.success(`Welcome back, ${email}!`);
-      console.log("Mock login successful:", email);
+      if (data.user) {
+        toast.success(`Welcome back, ${email}!`);
+        console.log("Login successful:", data);
+      }
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -66,11 +117,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   };
-
+  
   const logout = async () => {
     setIsLoading(true);
     try {
-      // Simply clear the user and profile states
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
+      
       setUser(null);
       setProfile(null);
       setSession(null);
@@ -82,16 +139,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   };
+  
+  // Bypass function for testing - creates a mock admin session
+  const bypassAuth = async () => {
+    setIsLoading(true);
+    try {
+      // Create a mock admin profile - this is for testing only!
+      const mockProfile: Profile = {
+        id: "bypass-admin-id",
+        name: "Admin Bypass",
+        email: "admin@example.com",
+        role: "admin",
+      };
+      
+      setProfile(mockProfile);
+      // Set minimal user object to make isAuthenticated true
+      setUser({ id: "bypass-admin-id", email: "admin@example.com" } as User);
+      toast.success("Bypassed authentication as Admin!");
+    } catch (error) {
+      console.error("Bypass auth error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const value = {
     user,
     profile,
     session,
-    isAuthenticated: !!user, // This will be true after login
+    isAuthenticated: !!user,
     isLoading,
     login,
     logout,
     refreshProfile,
+    bypassAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
