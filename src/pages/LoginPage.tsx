@@ -14,16 +14,19 @@ const LoginPage = () => {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     
     try {
       await login(email, password);
       toast.success(`Welcome back!`);
       navigate("/");
-    } catch (error) {
-      // Error is already handled in the login function
+    } catch (error: any) {
+      setError(error.message || "Failed to login");
+      console.error("Login error:", error);
     }
   };
 
@@ -51,38 +54,6 @@ const LoginPage = () => {
 
         <Card className="border-[#101B4C]/10 mb-6">
           <CardHeader>
-            <CardTitle className="text-[#101B4C]">Demo Credentials</CardTitle>
-            <CardDescription>
-              Use these credentials to explore the application
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="outline" 
-                className="border-[#101B4C] text-[#101B4C] flex justify-between items-center"
-                onClick={() => setDemoCredentials('admin')}
-              >
-                <span className="font-semibold">Admin User</span>
-                <span className="text-xs">admin@example.com</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="border-[#101B4C] text-[#101B4C] flex justify-between items-center"
-                onClick={() => setDemoCredentials('doctor')}
-              >
-                <span className="font-semibold">Doctor User</span>
-                <span className="text-xs">doctor@example.com</span>
-              </Button>
-            </div>
-            <p className="text-xs text-center text-[#2B2E33]/80">
-              Password for both accounts: <span className="font-mono bg-[#F0F0F0] px-1 py-0.5 rounded">password123</span>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[#101B4C]/10">
-          <CardHeader>
             <CardTitle className="text-[#101B4C]">Login</CardTitle>
             <CardDescription>
               Enter your credentials to access your account
@@ -90,6 +61,12 @@ const LoginPage = () => {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {error && (
+                <div className="bg-red-50 p-3 rounded-md flex items-start gap-2 text-red-700 text-sm">
+                  <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -125,6 +102,38 @@ const LoginPage = () => {
               </Button>
             </CardFooter>
           </form>
+        </Card>
+
+        <Card className="border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-[#101B4C] text-lg">Demo Credentials</CardTitle>
+            <CardDescription>
+              Use these options to quickly login
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="outline" 
+                className="border-[#101B4C] text-[#101B4C] flex justify-between items-center"
+                onClick={() => setDemoCredentials('admin')}
+              >
+                <span className="font-semibold">Admin User</span>
+                <span className="text-xs">admin@example.com</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="border-[#101B4C] text-[#101B4C] flex justify-between items-center"
+                onClick={() => setDemoCredentials('doctor')}
+              >
+                <span className="font-semibold">Doctor User</span>
+                <span className="text-xs">doctor@example.com</span>
+              </Button>
+            </div>
+            <p className="text-xs text-center text-[#2B2E33]/80">
+              Password for both accounts: <span className="font-mono bg-[#F0F0F0] px-1 py-0.5 rounded">password123</span>
+            </p>
+          </CardContent>
         </Card>
       </div>
     </div>
