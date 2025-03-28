@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
   adminOnly?: boolean;
 }
 
-const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // We'll still use the auth context, but we'll ignore its actual state
   const { isLoading } = useAuth();
 
