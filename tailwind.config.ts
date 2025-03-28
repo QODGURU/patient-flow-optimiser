@@ -64,12 +64,12 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				medical: {
-					'soft-blue': '#3A8DFF',
-					'vibrant-green': '#00C48C',
-					'slate-grey': '#4A4A4A',
-					'light-grey': '#F8F9FA',
-					'amber': '#FFA500',
-					'soft-red': '#F7665E'
+					'midnight-navy': '#101B4C',
+					'radiant-aqua': '#00FFC8',
+					'graphite-grey': '#2B2E33',
+					'pearl-white': '#FDFDFD',
+					'gold-amber': '#FFC107',
+					'luxe-crimson': '#FF3B3B'
 				},
 				warning: {
 					DEFAULT: 'hsl(var(--warning))',
@@ -104,7 +104,7 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out'
 			},
 			backgroundImage: {
-				'gradient-cta': 'linear-gradient(to right, #3A8DFF, #00C48C)'
+				'gradient-cta': 'linear-gradient(to right, #101B4C, #00FFC8)'
 			}
 		}
 	},

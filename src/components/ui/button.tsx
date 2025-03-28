@@ -10,16 +10,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-medical-soft-blue text-white hover:bg-medical-soft-blue/90",
+        default: "bg-medical-midnight-navy text-white hover:bg-medical-midnight-navy/90",
         destructive:
-          "bg-medical-soft-red text-white hover:bg-medical-soft-red/90",
+          "bg-medical-luxe-crimson text-white hover:bg-medical-luxe-crimson/90",
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
-          "bg-medical-vibrant-green text-white hover:bg-medical-vibrant-green/90",
+          "bg-medical-radiant-aqua text-medical-midnight-navy hover:bg-medical-radiant-aqua/90",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-medical-soft-blue underline-offset-4 hover:underline",
-        warning: "bg-medical-amber text-white hover:bg-medical-amber/90",
+        link: "text-medical-midnight-navy underline-offset-4 hover:underline",
+        warning: "bg-medical-gold-amber text-white hover:bg-medical-gold-amber/90",
         gradient: "bg-gradient-cta text-white hover:opacity-90",
       },
       size: {

@@ -64,8 +64,8 @@ const Layout = ({ children }: LayoutProps) => {
         className={cn(
           "flex items-center px-3 py-2 text-sm font-medium rounded-md",
           active 
-            ? "text-white bg-medical-navy" 
-            : "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+            ? "text-white bg-medical-midnight-navy" 
+            : "text-medical-graphite-grey hover:bg-gray-200 hover:text-medical-graphite-grey"
         )}
         onClick={closeSidebar}
       >
@@ -78,7 +78,7 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-medical-pearl-white">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
@@ -91,7 +91,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <Menu className="h-6 w-6" />
               </button>
               <Link to="/" className="flex items-center">
-                <span className="text-medical-navy font-bold text-xl ml-2">Patient Flow Optimiser</span>
+                <span className="text-medical-midnight-navy font-bold text-xl ml-2">Patient Flow Optimiser</span>
               </Link>
             </div>
             <div className="flex items-center space-x-4">
@@ -101,7 +101,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <Button variant="outline" size="icon" className="rounded-full">
                   <Bell className="h-5 w-5" />
                   {notifications > 0 && (
-                    <Badge className="absolute -top-1 -right-1 bg-red-500 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    <Badge className="absolute -top-1 -right-1 bg-medical-luxe-crimson h-5 w-5 flex items-center justify-center p-0 text-xs">
                       {notifications}
                     </Badge>
                   )}
@@ -110,7 +110,7 @@ const Layout = ({ children }: LayoutProps) => {
               
               <div className="flex items-center space-x-2">
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-700">{user.name}</p>
+                  <p className="text-sm font-medium text-medical-graphite-grey">{user.name}</p>
                   <p className="text-xs text-gray-500">{isAdmin ? "Admin" : "Doctor"}</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
@@ -140,7 +140,7 @@ const Layout = ({ children }: LayoutProps) => {
           )}
         >
           <div className="h-16 flex items-center justify-between px-4 md:hidden border-b">
-            <span className="text-medical-navy font-bold">Patient Flow Optimiser</span>
+            <span className="text-medical-midnight-navy font-bold">Patient Flow Optimiser</span>
             <button 
               className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none"
               onClick={closeSidebar}
