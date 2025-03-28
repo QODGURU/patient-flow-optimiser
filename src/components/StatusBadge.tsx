@@ -14,30 +14,30 @@ const statusMap = {
   },
   contacted: {
     label: "Contacted",
-    className: "bg-blue-100 text-medical-midnight-navy border-blue-300"
+    className: "bg-blue-100 text-blue-800 border-blue-300"
   },
   interested: {
     label: "Interested",
     className: "bg-purple-100 text-purple-800 border-purple-300"
   },
   booked: {
-    label: "Interested",
-    className: "bg-medical-radiant-aqua/20 text-medical-midnight-navy border-medical-radiant-aqua/40"
+    label: "Booked",
+    className: "bg-green-100 text-green-800 border-green-300"
   },
   cold: {
     label: "Cold",
-    className: "bg-gray-100 text-medical-graphite-grey border-gray-300"
+    className: "bg-gray-100 text-gray-700 border-gray-300"
   },
   "opt-out": {
     label: "Opt-out",
-    className: "bg-medical-luxe-crimson/10 text-medical-luxe-crimson border-medical-luxe-crimson/30"
+    className: "bg-red-100 text-red-800 border-red-300"
   }
 };
 
 const StatusBadge = ({ status, className }: StatusBadgeProps) => {
   const { label, className: badgeClassName } = statusMap[status] || {
     label: status,
-    className: "bg-gray-100 text-medical-graphite-grey border-gray-300"
+    className: "bg-gray-100 text-gray-700 border-gray-300"
   };
   
   return (
