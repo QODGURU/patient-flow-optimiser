@@ -64,10 +64,16 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				medical: {
-					teal: '#2DD4BF',
-					navy: '#1E40AF',
-					'light-blue': '#EFF6FF',
-					gray: '#F1F5F9'
+					'soft-blue': '#3A8DFF',
+					'vibrant-green': '#00C48C',
+					'slate-grey': '#4A4A4A',
+					'light-grey': '#F8F9FA',
+					'amber': '#FFA500',
+					'soft-red': '#F7665E'
+				},
+				warning: {
+					DEFAULT: 'hsl(var(--warning))',
+					foreground: 'hsl(var(--warning-foreground))'
 				}
 			},
 			borderRadius: {
@@ -96,6 +102,9 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
+			},
+			backgroundImage: {
+				'gradient-cta': 'linear-gradient(to right, #3A8DFF, #00C48C)'
 			}
 		}
 	},
