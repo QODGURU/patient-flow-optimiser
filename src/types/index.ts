@@ -16,7 +16,7 @@ export type PatientStatus =
   | "cold" 
   | "opt-out";
 
-export type FollowUpChannel = "call" | "sms" | "email";
+export type FollowUpChannel = "call" | "sms" | "email" | "message";
 
 export type FollowUpResponse = 
   | "yes" 

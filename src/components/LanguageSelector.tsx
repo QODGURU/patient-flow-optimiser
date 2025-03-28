@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,17 +16,34 @@ interface LanguageSelectorProps {
 }
 
 const LanguageSelector = ({ onChange }: LanguageSelectorProps) => {
-  const [language, setLanguage] = useState<Language>("en");
+  // Try to get the saved language from localStorage, or default to "en"
+  const [language, setLanguage] = useState<Language>(() => {
+    const savedLanguage = localStorage.getItem('language');
+    return (savedLanguage === 'ar' ? 'ar' : 'en') as Language;
+  });
+
+  // Set initial language on component mount
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+  }, []);
 
   const handleLanguageChange = (newLanguage: Language) => {
     setLanguage(newLanguage);
+    
+    // Save language preference to localStorage
+    localStorage.setItem('language', newLanguage);
+    
+    // Update document properties
+    document.documentElement.lang = newLanguage;
+    document.documentElement.dir = newLanguage === "ar" ? "rtl" : "ltr";
+    
+    // Call the onChange callback if provided
     if (onChange) {
       onChange(newLanguage);
     }
     
-    // In a real app, this would change the app's language
-    document.documentElement.lang = newLanguage;
-    document.documentElement.dir = newLanguage === "ar" ? "rtl" : "ltr";
+    // In a real app, we would also update translations context
   };
 
   return (
