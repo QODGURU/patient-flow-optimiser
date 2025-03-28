@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings';
+
 export function useSupabaseQuery<T>(
-  tableName: string,
+  tableName: TableName,
   options: {
     columns?: string;
     filters?: Record<string, any>;
@@ -117,7 +119,7 @@ export function useMutateSupabase() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const insert = async <T>(tableName: string, data: Partial<T> | Partial<T>[]) => {
+  const insert = async <T>(tableName: TableName, data: Partial<T>) => {
     setLoading(true);
     setError(null);
 
@@ -140,7 +142,7 @@ export function useMutateSupabase() {
     }
   };
 
-  const update = async <T>(tableName: string, id: string, data: Partial<T>) => {
+  const update = async <T>(tableName: TableName, id: string, data: Partial<T>) => {
     setLoading(true);
     setError(null);
 
@@ -164,7 +166,7 @@ export function useMutateSupabase() {
     }
   };
 
-  const remove = async (tableName: string, id: string) => {
+  const remove = async (tableName: TableName, id: string) => {
     setLoading(true);
     setError(null);
 
