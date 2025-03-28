@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,7 +46,7 @@ import * as XLSX from 'xlsx';
 // Validation schema for patient form
 const patientSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  age: z.string().transform(val => val === "" ? null : Number(val)),
+  age: z.coerce.number().nullable().optional(),
   gender: z.string().optional(),
   phone: z.string()
     .min(1, "Phone number is required")
@@ -55,7 +54,7 @@ const patientSchema = z.object({
   email: z.string().email("Invalid email").optional().nullable(),
   treatment_category: z.string().optional().nullable(),
   treatment_type: z.string().optional().nullable(),
-  price: z.string().transform(val => val === "" ? null : Number(val)),
+  price: z.coerce.number().nullable().optional(),
   doctor_id: z.string().optional().nullable(),
   clinic_id: z.string().optional().nullable(),
   clinic_name: z.string().optional().nullable(),
@@ -82,13 +81,13 @@ const AddPatientPage = () => {
     resolver: zodResolver(patientSchema),
     defaultValues: {
       name: "",
-      age: "",
+      age: null,
       gender: "male",
       phone: "+971",
       email: "",
       treatment_category: "",
       treatment_type: "",
-      price: "",
+      price: null,
       doctor_id: profile?.id || "",
       clinic_id: profile?.clinic_id || "",
       clinic_name: "",
@@ -101,7 +100,6 @@ const AddPatientPage = () => {
     },
   });
 
-  // Fetch clinics and doctors for dropdowns
   const { data: clinics } = useSupabaseQuery<Clinic>("clinics");
   const { data: doctors } = useSupabaseQuery<Profile>("profiles", {
     filters: { role: "doctor" }
@@ -115,13 +113,13 @@ const AddPatientPage = () => {
       // Transform the data to match the patient table structure
       const patientData: Partial<Patient> = {
         name: values.name,
-        age: values.age ? Number(values.age) : null,
+        age: values.age !== null ? values.age : null,
         gender: values.gender,
         phone: values.phone,
         email: values.email || null,
         treatment_category: values.treatment_category || null,
         treatment_type: values.treatment_type || null,
-        price: values.price ? Number(values.price) : null,
+        price: values.price !== null ? values.price : null,
         doctor_id: values.doctor_id || profile?.id || null,
         clinic_id: values.clinic_id || profile?.clinic_id || null,
         follow_up_required: values.follow_up_required,
@@ -302,7 +300,17 @@ const AddPatientPage = () => {
                           <FormItem>
                             <FormLabel>{t("age")}</FormLabel>
                             <FormControl>
-                              <Input {...field} type="number" min="0" max="120" />
+                              <Input 
+                                {...field} 
+                                type="number" 
+                                min="0" 
+                                max="120"
+                                value={field.value || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                  field.onChange(value);
+                                }}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -393,7 +401,16 @@ const AddPatientPage = () => {
                           <FormItem>
                             <FormLabel>{t("price")} (AED)</FormLabel>
                             <FormControl>
-                              <Input {...field} type="number" min="0" />
+                              <Input 
+                                {...field} 
+                                type="number" 
+                                min="0"
+                                value={field.value || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                  field.onChange(value);
+                                }}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
