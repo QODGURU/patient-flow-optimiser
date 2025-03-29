@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -53,12 +52,20 @@ const PatientsPage = () => {
 
       // Apply status filter if not "all"
       if (statusFilter !== "all") {
-        // Convert string to valid PatientStatus enum value
-        const validStatusValues: PatientStatus[] = ["pending", "contacted", "interested", "booked", "cold", "opt-out"];
-        const normalizedStatus = statusFilter.toLowerCase() as PatientStatus;
+        // The database expects capitalized status values
+        // The PatientStatus type values are lowercase, but DB values are capitalized
+        const dbStatusMap: Record<string, string> = {
+          "pending": "Pending",
+          "contacted": "Contacted",
+          "interested": "Interested",
+          "booked": "Booked",
+          "cold": "Cold",
+          "opt-out": "Opt-out"
+        };
         
-        if (validStatusValues.includes(normalizedStatus)) {
-          query = query.eq('status', normalizedStatus);
+        // Make sure the status exists in our map before applying the filter
+        if (dbStatusMap[statusFilter]) {
+          query = query.eq('status', dbStatusMap[statusFilter]);
         }
       }
       

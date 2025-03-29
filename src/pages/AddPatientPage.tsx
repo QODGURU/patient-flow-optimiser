@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -31,10 +30,9 @@ interface PatientFormData {
   script: string;
 }
 
-// For FileUploader component
+// Import FileUploader props interface - we'll adapt to what it actually accepts
 interface FileUploaderProps {
-  onSuccess?: (result: any) => void;
-  onError?: (error: string) => void;
+  // Remove properties that don't exist on the component
 }
 
 const AddPatientPage = () => {
@@ -78,7 +76,8 @@ const AddPatientPage = () => {
         script: data.script,
         doctor_id: user?.id,
         clinic_id: user?.clinicName, // This should be updated to use actual clinic ID
-        status: 'Pending' as PatientStatus, // Explicitly cast to PatientStatus enum
+        // Use capitalized status value to match database enum
+        status: 'Pending', // The database expects capitalized values like "Pending" not "pending"
         created_at: new Date().toISOString(),
         last_modified: new Date().toISOString(),
         last_modified_by: user?.id,
@@ -130,6 +129,7 @@ const AddPatientPage = () => {
   };
 
   return (
+    
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Add Patient</h1>
       <p className="text-muted-foreground">
@@ -316,11 +316,8 @@ const AddPatientPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* FileUploader without passing the userId prop */}
-              <FileUploader 
-                onSuccess={handleFileUploadSuccess} 
-                onError={handleFileUploadError}
-              />
+              {/* FileUploader component without props that don't exist */}
+              <FileUploader />
               
               <div className="mt-4">
                 <h3 className="font-medium mb-2">Template Instructions:</h3>
