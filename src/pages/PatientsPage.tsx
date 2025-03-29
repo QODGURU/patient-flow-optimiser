@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Patient, PatientStatus, patientStatusToDatabaseStatus } from "@/types";
+import { Patient, PatientStatus, DatabasePatientStatus, patientStatusToDatabaseStatus } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -55,8 +55,8 @@ const PatientsPage = () => {
         // Make sure the status exists in our map before applying the filter
         const frontendStatus = statusFilter as PatientStatus;
         if (frontendStatus in patientStatusToDatabaseStatus) {
-          // Get the database-compatible status value
-          const dbStatus = patientStatusToDatabaseStatus[frontendStatus];
+          // Get the database-compatible status value and explicitly type it
+          const dbStatus: DatabasePatientStatus = patientStatusToDatabaseStatus[frontendStatus];
           query = query.eq('status', dbStatus);
         }
       }

@@ -13,7 +13,7 @@ export interface User {
 export type PatientStatus = "pending" | "contacted" | "interested" | "booked" | "cold" | "opt-out";
 
 // Helper type for database-compatible status values
-// This needs to exactly match the enum values in the database
+// This MUST exactly match the enum values in the database
 export type DatabasePatientStatus = "Interested" | "Not Interested" | "Pending" | "Contacted" | "Booked" | "Cold" | "Opt-out";
 
 // Map to convert from frontend PatientStatus to database status
