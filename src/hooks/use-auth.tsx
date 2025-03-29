@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   name: data.name,
                   email: data.email,
                   role: data.role as UserRole,
-                  clinicName: data.clinic_name,
+                  clinicName: data.clinic_id, // Changed from clinic_name to clinic_id
                   phone: data.phone
                 });
               }
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 name: data.name,
                 email: data.email,
                 role: data.role as UserRole,
-                clinicName: data.clinic_name,
+                clinicName: data.clinic_id, // Changed from clinic_name to clinic_id
                 phone: data.phone
               });
             }

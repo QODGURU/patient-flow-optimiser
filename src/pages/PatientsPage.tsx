@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, Plus, Search, Download, Filter, Trash2 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +21,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 const ITEMS_PER_PAGE = 20;
@@ -52,9 +51,13 @@ const PatientsPage = () => {
           currentPage * ITEMS_PER_PAGE - 1
         );
 
-      // Apply status filter if not "all"
+      // Apply status filter if not "all" - with type safety
       if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
+        // Convert string to PatientStatus enum with proper validation
+        const validStatusValues = ["Pending", "Contacted", "Interested", "Not Interested", "Booked", "Cold"];
+        if (validStatusValues.includes(statusFilter)) {
+          query = query.eq('status', statusFilter);
+        }
       }
       
       // Apply search filter if there's a search term

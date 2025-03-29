@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -13,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Patient } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import FileUploader from "@/components/FileUploader";
@@ -29,6 +28,11 @@ interface PatientFormData {
   followUpRequired: boolean;
   notes: string;
   script: string;
+}
+
+// For FileUploader component
+interface FileUploaderProps {
+  userId: string;
 }
 
 const AddPatientPage = () => {
@@ -58,7 +62,7 @@ const AddPatientPage = () => {
   const onSubmit = async (data: PatientFormData) => {
     setIsLoading(true);
     try {
-      // Format the data for Supabase
+      // Format the data for Supabase with correct types
       const patientData = {
         name: data.name,
         age: data.age,
@@ -72,7 +76,7 @@ const AddPatientPage = () => {
         script: data.script,
         doctor_id: user?.id,
         clinic_id: user?.clinicName, // This should be updated to use actual clinic ID
-        status: 'Pending', // Default status
+        status: 'Pending', // Use the enum value directly as a string literal
         created_at: new Date().toISOString(),
         last_modified: new Date().toISOString(),
         last_modified_by: user?.id,
@@ -310,11 +314,8 @@ const AddPatientPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FileUploader 
-                onSuccess={handleFileUploadSuccess}
-                onError={handleFileUploadError}
-                userId={user?.id || ""}
-              />
+              {/* Removed props that aren't supported by the component */}
+              <FileUploader userId={user?.id || ""} />
               
               <div className="mt-4">
                 <h3 className="font-medium mb-2">Template Instructions:</h3>

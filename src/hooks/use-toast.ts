@@ -1,5 +1,5 @@
 
-import { Toast, toast } from "sonner";
+import { toast } from "sonner";
 
 type ToastProps = {
   title?: string;
@@ -10,7 +10,7 @@ type ToastProps = {
 
 export function useToast() {
   const showToast = ({ title, description, action, variant }: ToastProps) => {
-    const toastOptions: Toast = {
+    const toastOptions = {
       description,
       action,
     };

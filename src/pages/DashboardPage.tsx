@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -39,79 +39,94 @@ const DashboardPage = () => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        // Get patient counts by status
-        let query = supabase.from('patients').select('status', { count: 'exact' });
-        
-        // Filter by doctor if not admin
+        // Modified queries to fix type issues
+        let totalPatients = 0;
+        let pendingPatients = 0;
+        let contactedPatients = 0;
+        let interestedPatients = 0;
+        let notInterestedPatients = 0;
+        let coldLeads = 0;
+        let totalFollowUps = 0;
+        let pendingFollowUps = 0;
+
+        // Get total patients
+        let query = supabase.from('patients').select('*', { count: 'exact' });
         if (user?.role !== "admin") {
           query = query.eq('doctor_id', user?.id);
         }
-        
-        const { count: totalPatients } = await query;
+        const { count } = await query;
+        totalPatients = count || 0;
         
         // Get pending patients
-        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Pending');
+        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Pending');
         if (user?.role !== "admin") {
           query = query.eq('doctor_id', user?.id);
         }
-        const { count: pendingPatients } = await query;
+        const pendingResult = await query;
+        pendingPatients = pendingResult.count || 0;
         
         // Get contacted patients
-        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Contacted');
+        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Contacted');
         if (user?.role !== "admin") {
           query = query.eq('doctor_id', user?.id);
         }
-        const { count: contactedPatients } = await query;
+        const contactedResult = await query;
+        contactedPatients = contactedResult.count || 0;
         
         // Get interested patients
-        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Interested');
+        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Interested');
         if (user?.role !== "admin") {
           query = query.eq('doctor_id', user?.id);
         }
-        const { count: interestedPatients } = await query;
+        const interestedResult = await query;
+        interestedPatients = interestedResult.count || 0;
         
         // Get not interested patients
-        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Not Interested');
+        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Not Interested');
         if (user?.role !== "admin") {
           query = query.eq('doctor_id', user?.id);
         }
-        const { count: notInterestedPatients } = await query;
+        const notInterestedResult = await query;
+        notInterestedPatients = notInterestedResult.count || 0;
         
         // Get cold leads
-        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Cold');
+        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Cold');
         if (user?.role !== "admin") {
           query = query.eq('doctor_id', user?.id);
         }
-        const { count: coldLeads } = await query;
+        const coldResult = await query;
+        coldLeads = coldResult.count || 0;
         
         // Get follow-ups stats
-        let followUpsQuery = supabase.from('follow_ups').select('id', { count: 'exact' });
+        let followUpsQuery = supabase.from('follow_ups').select('*', { count: 'exact' });
         if (user?.role !== "admin") {
           followUpsQuery = followUpsQuery.eq('created_by', user?.id);
         }
-        const { count: totalFollowUps } = await followUpsQuery;
+        const followUpsResult = await followUpsQuery;
+        totalFollowUps = followUpsResult.count || 0;
         
         // Get pending follow-ups (using next_interaction)
         const now = new Date().toISOString();
         query = supabase.from('patients')
-          .select('id', { count: 'exact' })
+          .select('*', { count: 'exact' })
           .not('next_interaction', 'is', null)
           .lt('next_interaction', now);
           
         if (user?.role !== "admin") {
           query = query.eq('doctor_id', user?.id);
         }
-        const { count: pendingFollowUps } = await query;
+        const pendingFollowUpsResult = await query;
+        pendingFollowUps = pendingFollowUpsResult.count || 0;
         
         setStats({
-          totalPatients: totalPatients || 0,
-          pendingPatients: pendingPatients || 0,
-          contactedPatients: contactedPatients || 0,
-          interestedPatients: interestedPatients || 0,
-          notInterestedPatients: notInterestedPatients || 0,
-          coldLeads: coldLeads || 0,
-          totalFollowUps: totalFollowUps || 0,
-          pendingFollowUps: pendingFollowUps || 0,
+          totalPatients,
+          pendingPatients,
+          contactedPatients,
+          interestedPatients,
+          notInterestedPatients,
+          coldLeads,
+          totalFollowUps,
+          pendingFollowUps,
         });
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
