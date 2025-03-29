@@ -134,12 +134,12 @@ export const createDemoAdminUser = async () => {
       return { success: true, profile: existingProfile, error: null };
     }
     
-    // Create a new demo admin profile
+    // Create a new demo admin profile with the correct role type
     const demoProfile = {
       id: "demo-admin-id",
       name: "Demo Admin",
       email: "admin@example.com",
-      role: "admin",
+      role: "admin" as const, // Using 'as const' to ensure TypeScript knows this is exactly "admin"
       phone: "+971551234567",
     };
     

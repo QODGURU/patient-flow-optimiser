@@ -70,7 +70,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         doctor_id: values.doctor_id || profile?.id || null,
         clinic_id: values.clinic_id || profile?.clinic_id || null,
         follow_up_required: values.follow_up_required,
-        status: "Pending" as const,
+        status: "Pending" as const, // Ensuring TypeScript knows this is specifically "Pending"
         preferred_time: values.preferred_time as "Morning" | "Afternoon" | "Evening" | undefined,
         preferred_channel: values.preferred_channel as "Call" | "SMS" | "Email" | undefined,
         availability_preferences: values.availability_preferences || null,
