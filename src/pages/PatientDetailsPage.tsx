@@ -62,17 +62,24 @@ const PatientDetailsPage = () => {
       if (demoPatients) {
         try {
           const parsedPatients = JSON.parse(demoPatients);
+          // Make sure to convert patientId string to the same type as the id in the parsed data
+          // Some implementations might store IDs as numbers in localStorage but as strings in URLs
           const patient = parsedPatients.find((p: Patient) => p.id === patientId);
+          
           if (patient) {
             console.log("Found patient in demo data:", patient);
             setManualPatientData(patient);
             
             // Set initial form values
-            setName(patient.name);
-            setPhone(patient.phone);
-            setEmail(patient.email || "");
-            setNotes(patient.notes || "");
+            setName(patient.name || '');
+            setPhone(patient.phone || '');
+            setEmail(patient.email || '');
+            setNotes(patient.notes || '');
             setNextInteraction(patient.next_interaction ? new Date(patient.next_interaction) : undefined);
+          } else {
+            console.error("Patient not found in demo data for ID:", patientId);
+            // Debugging: Log all patient IDs to check format
+            console.log("Available patient IDs:", parsedPatients.map((p: Patient) => p.id));
           }
         } catch (error) {
           console.error("Error parsing demo patients:", error);
@@ -97,10 +104,10 @@ const PatientDetailsPage = () => {
 
   useEffect(() => {
     if (patient && patient.length > 0 && !manualPatientData) {
-      setName(patient[0].name);
-      setPhone(patient[0].phone);
-      setEmail(patient[0].email || "");
-      setNotes(patient[0].notes || "");
+      setName(patient[0].name || '');
+      setPhone(patient[0].phone || '');
+      setEmail(patient[0].email || '');
+      setNotes(patient[0].notes || '');
       setNextInteraction(patient[0].next_interaction ? new Date(patient[0].next_interaction) : undefined);
     }
   }, [patient, manualPatientData]);
@@ -112,16 +119,16 @@ const PatientDetailsPage = () => {
   const handleCancelClick = () => {
     setIsEditing(false);
     if (manualPatientData) {
-      setName(manualPatientData.name);
-      setPhone(manualPatientData.phone);
-      setEmail(manualPatientData.email || "");
-      setNotes(manualPatientData.notes || "");
+      setName(manualPatientData.name || '');
+      setPhone(manualPatientData.phone || '');
+      setEmail(manualPatientData.email || '');
+      setNotes(manualPatientData.notes || '');
       setNextInteraction(manualPatientData.next_interaction ? new Date(manualPatientData.next_interaction) : undefined);
     } else if (patient && patient.length > 0) {
-      setName(patient[0].name);
-      setPhone(patient[0].phone);
-      setEmail(patient[0].email || "");
-      setNotes(patient[0].notes || "");
+      setName(patient[0].name || '');
+      setPhone(patient[0].phone || '');
+      setEmail(patient[0].email || '');
+      setNotes(patient[0].notes || '');
       setNextInteraction(patient[0].next_interaction ? new Date(patient[0].next_interaction) : undefined);
     }
   };
@@ -220,16 +227,39 @@ const PatientDetailsPage = () => {
   };
 
   if (patientLoading && !manualPatientData) {
-    return <div>Loading patient details...</div>;
+    return <div className="p-8 text-center">Loading patient details...</div>;
   }
 
   // If we don't have a patient object either from Supabase or demo data
   if (!manualPatientData && (!patient || patient.length === 0)) {
-    return <div>Patient not found</div>;
+    return (
+      <div className="p-8">
+        <div className="mb-6">
+          <Button variant="ghost" onClick={() => navigate("/patients")}>
+            ← Back to Patients
+          </Button>
+        </div>
+        <Card className="max-w-2xl mx-auto">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-xl font-semibold text-red-600 mb-4">Patient Not Found</h2>
+            <p className="mb-4">The patient you're looking for could not be found. It may have been deleted or you may have an incorrect link.</p>
+            <Button 
+              onClick={() => navigate("/patients")}
+              className="bg-medical-teal hover:bg-teal-600">
+              Return to Patient List
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Use either the manual data or the first patient from Supabase
-  const patientData = manualPatientData || patient[0];
+  const patientData = manualPatientData || (patient && patient.length > 0 ? patient[0] : null);
+  
+  if (!patientData) {
+    return <div className="p-8 text-center">Error loading patient data.</div>;
+  }
   
   const {
     age,

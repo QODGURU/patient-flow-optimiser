@@ -55,92 +55,66 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
   
   // Check for demo data first
   useEffect(() => {
-    if (patientId) {
-      const demoFollowUps = localStorage.getItem('demo_follow_ups');
-      const demoPatients = localStorage.getItem('demo_patients');
-      
-      if (demoFollowUps && demoPatients) {
-        try {
-          const parsedFollowUps = JSON.parse(demoFollowUps);
-          const patientFollowUps = parsedFollowUps.filter((f: FollowUp) => f.patient_id === patientId);
-          
-          if (patientFollowUps.length > 0) {
-            console.log(`Found ${patientFollowUps.length} follow-ups in demo data for patient ${patientId}`);
-            
-            const parsedPatients = JSON.parse(demoPatients);
-            const patient = parsedPatients.find((p: Patient) => p.id === patientId);
-            
-            // Merge data
-            const merged = patientFollowUps.map((followUp: FollowUp) => ({
+    const demoFollowUps = localStorage.getItem('demo_follow_ups');
+    const demoPatients = localStorage.getItem('demo_patients');
+    
+    if (demoFollowUps && demoPatients) {
+      try {
+        const parsedFollowUps = JSON.parse(demoFollowUps);
+        const parsedPatients = JSON.parse(demoPatients);
+        
+        let filteredFollowUps;
+        
+        if (patientId) {
+          // Filter for specific patient
+          filteredFollowUps = parsedFollowUps.filter((f: FollowUp) => f.patient_id === patientId);
+          console.log(`Found ${filteredFollowUps.length} follow-ups in demo data for patient ${patientId}`);
+        } else {
+          // Get all follow-ups
+          filteredFollowUps = parsedFollowUps;
+          console.log(`Found ${filteredFollowUps.length} total follow-ups in demo data`);
+        }
+        
+        if (filteredFollowUps.length > 0) {
+          // Merge data
+          const merged = filteredFollowUps.map((followUp: FollowUp) => {
+            const patient = parsedPatients.find((p: Patient) => p.id === followUp.patient_id);
+            return {
               ...followUp,
               patientName: patient?.name || 'Unknown Patient',
               clinicName: 'Demo Clinic',
               doctorId: followUp.created_by || 'unknown'
-            }));
-            
-            setMergedFollowUps(merged);
-          }
-        } catch (error) {
-          console.error("Error parsing demo data:", error);
-        }
-      }
-    } else {
-      // Handle the case when we need all follow-ups (not specific to a patient)
-      const demoFollowUps = localStorage.getItem('demo_follow_ups');
-      const demoPatients = localStorage.getItem('demo_patients');
-      
-      if (demoFollowUps && demoPatients) {
-        try {
-          const parsedFollowUps = JSON.parse(demoFollowUps);
-          const parsedPatients = JSON.parse(demoPatients);
+            };
+          });
           
-          if (parsedFollowUps.length > 0) {
-            console.log(`Found ${parsedFollowUps.length} follow-ups in demo data`);
-            
-            // Merge data
-            const merged = parsedFollowUps.map((followUp: FollowUp) => {
-              const patient = parsedPatients.find((p: Patient) => p.id === followUp.patient_id);
-              return {
-                ...followUp,
-                patientName: patient?.name || 'Unknown Patient',
-                clinicName: 'Demo Clinic',
-                doctorId: followUp.created_by || 'unknown'
-              };
-            });
-            
-            // Apply limit if needed
-            const limitedFollowUps = limit ? merged.slice(0, limit) : merged;
-            setMergedFollowUps(limitedFollowUps);
-          }
-        } catch (error) {
-          console.error("Error parsing demo data:", error);
+          // Apply limit if needed and not specific to a patient
+          const limitedFollowUps = !patientId && limit ? merged.slice(0, limit) : merged;
+          setMergedFollowUps(limitedFollowUps);
+          return; // Exit early as we have demo data
         }
+      } catch (error) {
+        console.error("Error parsing demo data:", error);
       }
     }
-  }, [patientId, limit]);
-  
-  // If no demo data, use database data
-  useEffect(() => {
-    if (followUps.length > 0 && patients.length > 0) {
-      // Only merge if we got data from Supabase and not from demo data
-      if (mergedFollowUps.length === 0) {
-        const merged = followUps.map((followUp) => {
-          const patient = patients.find(p => p.id === followUp.patient_id);
-          const creator = profiles.find(p => p.id === followUp.created_by);
-          
-          return {
-            ...followUp,
-            patientName: patient?.name || 'Unknown Patient',
-            clinicName: 'Clinic Name',
-            doctorName: creator?.name || 'Unknown',
-            doctorId: followUp.created_by || ''
-          };
-        });
+    
+    // If no demo data or error parsing, continue to use Supabase data
+    if (followUps.length > 0) {
+      const merged = followUps.map((followUp) => {
+        const patient = patients.find(p => p.id === followUp.patient_id);
+        const creator = profiles.find(p => p.id === followUp.created_by);
         
-        setMergedFollowUps(merged);
-      }
+        return {
+          ...followUp,
+          patientName: patient?.name || 'Unknown Patient',
+          clinicName: 'Clinic Name',
+          doctorName: creator?.name || 'Unknown',
+          doctorId: followUp.created_by || ''
+        };
+      });
+      
+      setMergedFollowUps(merged);
     }
-  }, [followUps, patients, profiles]);
+  }, [followUps, patients, profiles, patientId, limit]);
   
   const handleNewFollowUp = () => {
     if (!patientId) {
