@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatabasePatientStatus, Patient, PatientStatus, patientStatusToDatabaseStatus } from "@/types";
+import { Patient, PatientStatus, patientStatusToDatabaseStatus } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -53,12 +53,10 @@ const PatientsPage = () => {
       // Apply status filter if not "all"
       if (statusFilter !== "all") {
         // Make sure the status exists in our map before applying the filter
-        // The statusFilter is a string, but we need to ensure it's a valid PatientStatus
-        // before using it with our mapping object
         const frontendStatus = statusFilter as PatientStatus;
-        if (patientStatusToDatabaseStatus[frontendStatus]) {
-          // TypeScript now knows this is a valid database status value 
-          const dbStatus = patientStatusToDatabaseStatus[frontendStatus] as DatabasePatientStatus;
+        if (frontendStatus in patientStatusToDatabaseStatus) {
+          // Get the database-compatible status value
+          const dbStatus = patientStatusToDatabaseStatus[frontendStatus];
           query = query.eq('status', dbStatus);
         }
       }
