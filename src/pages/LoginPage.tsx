@@ -19,6 +19,7 @@ const LoginPage = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("User is authenticated, redirecting to dashboard");
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
@@ -33,10 +34,17 @@ const LoginPage = () => {
     }
     
     try {
+      console.log("Attempting login for:", email);
       await login(email, password);
-      // Navigate is handled by the useEffect above when isAuthenticated changes
+      // Navigation is handled by the useEffect above when isAuthenticated changes
     } catch (error: any) {
-      setError(error.message || "Failed to login");
+      // More specific error handling
+      const errorMsg = error.message || "Failed to login";
+      if (errorMsg.includes("Invalid login credentials")) {
+        setError("Invalid email or password. Please check your credentials and try again.");
+      } else {
+        setError(errorMsg);
+      }
       console.error("Login error:", error);
     }
   };

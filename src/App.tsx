@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
@@ -24,32 +23,35 @@ import { Button } from "./components/ui/button";
 const AdminBypass = () => {
   const { bypassAuth } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
     // Check if admin state is stored in local storage
     const storedAdminState = localStorage.getItem('adminBypass');
     if (storedAdminState === 'true') {
-      setTimeout(() => {
-        bypassAuth(); // Call bypassAuth directly with a small delay
-        setIsAdmin(true);
-      }, 100);
+      handleBypassImplementation();
     }
-  }, [bypassAuth]);
+  }, []);
   
-  const handleBypass = async () => {
+  const handleBypassImplementation = async () => {
+    setIsLoading(true);
     try {
       await bypassAuth();
       setIsAdmin(true);
       localStorage.setItem('adminBypass', 'true');
+      // Don't redirect here - let the normal routing handle it
       toast.success("Admin access granted (DEVELOPMENT ONLY)");
-      // Force navigation to dashboard after bypass
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 500);
     } catch (error) {
       console.error("Bypass error:", error);
       toast.error("Admin bypass failed");
+      localStorage.removeItem('adminBypass');
+    } finally {
+      setIsLoading(false);
     }
+  };
+  
+  const handleBypass = () => {
+    handleBypassImplementation();
   };
   
   const handleLogout = () => {
@@ -57,6 +59,18 @@ const AdminBypass = () => {
     setIsAdmin(false);
     window.location.href = '/login';
   };
+  
+  if (isLoading) {
+    return (
+      <Button
+        disabled
+        className="fixed bottom-4 right-4 bg-yellow-600 text-white p-2 rounded-full shadow-lg z-50 flex items-center justify-center"
+        title="Activating Admin mode..."
+      >
+        <KeyRound size={20} />
+      </Button>
+    );
+  }
   
   if (isAdmin) {
     return (

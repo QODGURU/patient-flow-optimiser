@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { isUserAuthenticated, getCurrentUserProfile } from "@/integrations/supabase/client";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,44 +15,22 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
   const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
-    // Verify authentication with the server directly
+    // Simplified auth check that uses the context directly
     const verifyAuth = async () => {
       if (!isLoading) {
-        // Double-check with Supabase directly
-        const { isAuthenticated: isDirectlyAuthenticated, error } = await isUserAuthenticated();
-        console.log("Direct auth check:", { isDirectlyAuthenticated, error });
-
-        if (error) {
-          console.error("Auth verification error:", error);
-          toast.error("Authentication error. Please log in again.");
+        // Check if user is authenticated via context
+        if (!isAuthenticated) {
+          console.log("User not authenticated, redirecting to login");
           navigate("/login");
           return;
         }
 
-        if (!isDirectlyAuthenticated) {
-          console.log("User not authenticated via direct check, redirecting to login");
-          navigate("/login");
+        // If this is an admin-only route, check if user is admin
+        if (isAuthenticated && adminOnly && profile?.role !== "admin") {
+          console.log("User is not admin, redirecting to dashboard");
+          toast.error("You don't have permission to access this page");
+          navigate("/dashboard");
           return;
-        }
-
-        if (isDirectlyAuthenticated && adminOnly) {
-          // Verify admin status
-          const { profile: directProfile, error: profileError } = await getCurrentUserProfile();
-          console.log("Direct profile check:", { directProfile, profileError });
-
-          if (profileError || !directProfile) {
-            console.error("Profile verification error:", profileError);
-            toast.error("Profile verification error. Please log in again.");
-            navigate("/login");
-            return;
-          }
-
-          if (directProfile.role !== "admin") {
-            console.log("User is not admin, redirecting to dashboard");
-            toast.error("You don't have permission to access this page");
-            navigate("/dashboard");
-            return;
-          }
         }
 
         setVerifying(false);
@@ -61,7 +38,7 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
     };
 
     verifyAuth();
-  }, [isAuthenticated, isLoading, adminOnly, navigate]);
+  }, [isAuthenticated, isLoading, adminOnly, navigate, profile]);
 
   // Show loading state during verification
   if (isLoading || verifying) {
