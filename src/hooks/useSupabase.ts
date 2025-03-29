@@ -135,7 +135,7 @@ export function useMutateSupabase() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const insert = async <T>(tableName: TableName, data: Partial<T>) => {
+  const insert = async <T>(tableName: TableName, data: T) => {
     setLoading(true);
     setError(null);
 

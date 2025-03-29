@@ -10,7 +10,7 @@ import { TreatmentInfoForm } from "./TreatmentInfoForm";
 import { FollowUpPreferencesForm } from "./FollowUpPreferencesForm";
 import { ClinicInfoForm } from "./ClinicInfoForm";
 import { AdditionalInfoForm } from "./AdditionalInfoForm";
-import { VoipInfoForm } from "./VoipInfoForm";  // New component we'll create
+import { VoipInfoForm } from "./VoipInfoForm";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Profile, Clinic, Patient } from "@/types/supabase";
 import { CardContent, CardFooter } from "@/components/ui/card";
@@ -51,7 +51,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     
     try {
       // Transform the data to match the patient table structure
-      const patientData: Partial<Patient> = {
+      const patientData = {
         name: values.name,
         age: values.age !== undefined && values.age !== null ? Number(values.age) : null,
         gender: values.gender,

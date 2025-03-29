@@ -12,7 +12,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, profile, checkAuth } = useAuth();
+  const { isAuthenticated, isLoading, profile } = useAuth();
   const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
     };
 
     verifyAuth();
-  }, [isAuthenticated, isLoading, adminOnly, navigate, checkAuth]);
+  }, [isAuthenticated, isLoading, adminOnly, navigate]);
 
   // Show loading state during verification
   if (isLoading || verifying) {
