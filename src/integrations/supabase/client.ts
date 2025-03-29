@@ -14,6 +14,36 @@ export const supabase = createClient<Database>(
       persistSession: true,
       storage: localStorage,
       autoRefreshToken: true,
+      debug: true, // Enable debug mode for better error logging
+    },
+    global: {
+      headers: {
+        'Content-Type': 'application/json',
+      },
     },
   }
 );
+
+// Utility function to check if a user is authenticated
+export const isUserAuthenticated = async () => {
+  const { data, error } = await supabase.auth.getSession();
+  return { 
+    isAuthenticated: !!data.session, 
+    session: data.session, 
+    error 
+  };
+};
+
+// Utility function to get current user profile
+export const getCurrentUserProfile = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { profile: null, error: new Error('No active session') };
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+    
+  return { profile: data, error };
+};

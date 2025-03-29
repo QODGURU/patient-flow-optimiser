@@ -18,28 +18,59 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "./components/ui/button";
 
 // Admin bypass button component for development purposes only
 const AdminBypass = () => {
   const { bypassAuth } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    // Check if admin state is stored in local storage
+    const storedAdminState = localStorage.getItem('adminBypass');
+    if (storedAdminState === 'true') {
+      setIsAdmin(true);
+    }
+  }, []);
   
   const handleBypass = async () => {
     try {
       await bypassAuth();
+      setIsAdmin(true);
+      localStorage.setItem('adminBypass', 'true');
       toast.success("Admin access granted (DEVELOPMENT ONLY)");
     } catch (error) {
       console.error("Bypass error:", error);
+      toast.error("Admin bypass failed");
     }
   };
   
+  const handleLogout = () => {
+    localStorage.removeItem('adminBypass');
+    setIsAdmin(false);
+    window.location.href = '/login';
+  };
+  
+  if (isAdmin) {
+    return (
+      <Button
+        onClick={handleLogout}
+        className="fixed bottom-4 right-4 bg-red-600 text-white p-2 rounded-full shadow-lg hover:bg-red-700 z-50 flex items-center justify-center"
+        title="Log out of Admin mode"
+      >
+        <KeyRound size={20} />
+      </Button>
+    );
+  }
+  
   return (
-    <button
+    <Button
       onClick={handleBypass}
       className="fixed bottom-4 right-4 bg-red-50 text-red-800 p-2 rounded-full shadow-lg hover:bg-red-100 z-50 flex items-center justify-center"
       title="Bypass Authentication (ADMIN MODE)"
     >
       <KeyRound size={20} />
-    </button>
+    </Button>
   );
 };
 

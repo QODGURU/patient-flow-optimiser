@@ -22,6 +22,11 @@ export const patientSchema = z.object({
   availability_preferences: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   script: z.string().optional().nullable(),
+  // VoIP integration fields
+  voip_call_id: z.string().optional().nullable(),
+  voip_call_status: z.string().optional().nullable(),
+  voip_call_timestamp: z.string().optional().nullable(),
+  voip_call_duration: z.number().optional().nullable(),
 });
 
 export type PatientFormValues = z.infer<typeof patientSchema>;
@@ -45,4 +50,9 @@ export const defaultPatientValues: PatientFormValues = {
   availability_preferences: "",
   notes: "",
   script: "",
+  // VoIP defaults
+  voip_call_id: null,
+  voip_call_status: null,
+  voip_call_timestamp: null,
+  voip_call_duration: null,
 };

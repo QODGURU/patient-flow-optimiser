@@ -52,6 +52,11 @@ export type Patient = {
   last_modified_by?: string;
   script?: string;
   cold_reason?: string;
+  // VoIP fields
+  voip_call_id?: string;
+  voip_call_status?: string;
+  voip_call_timestamp?: string;
+  voip_call_duration?: number;
 }
 
 export type FollowUp = {
@@ -73,6 +78,16 @@ export type Settings = {
   outreach_end_time: string;
   excluded_days: string[];
   outreach_interval: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type ApiConfiguration = {
+  id: string;
+  api_name: string;
+  api_key?: string;
+  api_secret?: string;
+  configuration?: Record<string, any>;
   created_at?: string;
   updated_at?: string;
 }

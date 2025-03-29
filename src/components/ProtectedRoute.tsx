@@ -1,8 +1,9 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { isUserAuthenticated, getCurrentUserProfile } from "@/integrations/supabase/client";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,49 +12,69 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, profile } = useAuth();
+  const { isAuthenticated, isLoading, profile, checkAuth } = useAuth();
+  const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        // Redirect to login if not authenticated
-        console.log("User not authenticated, redirecting to login");
-        navigate("/login");
-        return;
-      }
-      
-      if (isAuthenticated && adminOnly && profile?.role !== "admin") {
-        // Redirect to dashboard if not admin but trying to access admin-only route
-        console.log("User is not admin, redirecting to dashboard");
-        toast.error("You don't have permission to access this page");
-        navigate("/dashboard");
-        return;
-      }
-      
-      console.log("Protected route access granted", { 
-        isAuthenticated, 
-        role: profile?.role, 
-        adminOnly 
-      });
-    }
-  }, [isAuthenticated, isLoading, adminOnly, profile, navigate]);
+    // Verify authentication with the server directly
+    const verifyAuth = async () => {
+      if (!isLoading) {
+        // Double-check with Supabase directly
+        const { isAuthenticated: isDirectlyAuthenticated, error } = await isUserAuthenticated();
+        console.log("Direct auth check:", { isDirectlyAuthenticated, error });
 
-  if (isLoading) {
+        if (error) {
+          console.error("Auth verification error:", error);
+          toast.error("Authentication error. Please log in again.");
+          navigate("/login");
+          return;
+        }
+
+        if (!isDirectlyAuthenticated) {
+          console.log("User not authenticated via direct check, redirecting to login");
+          navigate("/login");
+          return;
+        }
+
+        if (isDirectlyAuthenticated && adminOnly) {
+          // Verify admin status
+          const { profile: directProfile, error: profileError } = await getCurrentUserProfile();
+          console.log("Direct profile check:", { directProfile, profileError });
+
+          if (profileError || !directProfile) {
+            console.error("Profile verification error:", profileError);
+            toast.error("Profile verification error. Please log in again.");
+            navigate("/login");
+            return;
+          }
+
+          if (directProfile.role !== "admin") {
+            console.log("User is not admin, redirecting to dashboard");
+            toast.error("You don't have permission to access this page");
+            navigate("/dashboard");
+            return;
+          }
+        }
+
+        setVerifying(false);
+      }
+    };
+
+    verifyAuth();
+  }, [isAuthenticated, isLoading, adminOnly, navigate, checkAuth]);
+
+  // Show loading state during verification
+  if (isLoading || verifying) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-medical-teal"></div>
-        <span className="ml-3">Loading...</span>
+        <span className="ml-3">Verifying access...</span>
       </div>
     );
   }
 
-  // Allow rendering only if authenticated (and is admin if adminOnly is true)
-  if (isAuthenticated && (!adminOnly || (adminOnly && profile?.role === "admin"))) {
-    return <>{children}</>;
-  }
-
-  // This will briefly show before the redirect happens
-  return null;
+  // If we've completed verification, render the children
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

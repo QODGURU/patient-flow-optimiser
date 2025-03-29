@@ -1,12 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 // Define valid table names as a literal type
-type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings';
+type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings' | 'api_configurations';
 
 export function useSupabaseQuery<T>(
   tableName: TableName,
@@ -36,7 +36,7 @@ export function useSupabaseQuery<T>(
     enabled = true
   } = options;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!isAuthenticated || !enabled) {
       setLoading(false);
       return;
@@ -122,11 +122,11 @@ export function useSupabaseQuery<T>(
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, tableName, JSON.stringify(filters), orderBy?.column, orderBy?.ascending, limit, page, foreignTable, enabled, columns]);
 
   useEffect(() => {
     fetchData();
-  }, [isAuthenticated, tableName, JSON.stringify(filters), orderBy?.column, orderBy?.ascending, limit, page, foreignTable, enabled]);
+  }, [fetchData]);
 
   return { data, count, loading, error, refetch: fetchData };
 }
