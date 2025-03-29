@@ -299,7 +299,7 @@ const LoginPage = () => {
                 <div>
                   {connectionStatus.checked ? (
                     connectionStatus.success ? (
-                      <Badge variant="success" className="bg-green-500">Connected</Badge>
+                      <Badge variant="default" className="bg-green-500 text-white">Connected</Badge>
                     ) : (
                       <Badge variant="destructive">Failed</Badge>
                     )
@@ -311,7 +311,7 @@ const LoginPage = () => {
                 <div className="font-medium">Auth Status:</div>
                 <div>
                   {isAuthenticated ? (
-                    <Badge variant="success" className="bg-green-500">Authenticated</Badge>
+                    <Badge variant="default" className="bg-green-500 text-white">Authenticated</Badge>
                   ) : (
                     <Badge variant="secondary">Not Authenticated</Badge>
                   )}
