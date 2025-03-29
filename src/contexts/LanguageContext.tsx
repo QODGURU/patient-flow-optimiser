@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 
 // Define available languages
 const languages = ["en", "ar"] as const;
@@ -49,6 +49,15 @@ const translations: Record<Language, TranslationMap> = {
     no: "No",
     error: "Error",
     success: "Success",
+    tryAgainOrContactSupport: "Please try again or contact support.",
+    databaseConnectionError: "Database Connection Error",
+    unableToConnectToDatabase: "Unable to connect to the database. Please try again later.",
+    retryConnection: "Retry Connection",
+    checkingDatabaseConnection: "Checking database connection...",
+    manualEntry: "Manual Entry",
+    bulkUpload: "Bulk Upload",
+    uploadCsvOrExcel: "Upload CSV or Excel files to bulk import patient records",
+    bulkImportPatients: "Bulk Import Patients",
     
     // Auth related
     email: "Email",
@@ -59,6 +68,7 @@ const translations: Record<Language, TranslationMap> = {
     
     // Patient related
     addPatient: "Add Patient",
+    addNewPatient: "Add New Patient",
     patientDetails: "Patient Details",
     patientName: "Patient Name",
     phoneNumber: "Phone Number",
@@ -194,6 +204,9 @@ const translations: Record<Language, TranslationMap> = {
   }
 };
 
+// Local storage key for caching translations
+const TRANSLATION_CACHE_KEY = 'medical-crm-translations';
+
 // Define the provider component
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // State for the current language
@@ -205,6 +218,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
   
   const [isTranslating, setIsTranslating] = useState(false);
+  const [translationCache, setTranslationCache] = useState<Record<string, string>>(() => {
+    const cached = localStorage.getItem(TRANSLATION_CACHE_KEY);
+    return cached ? JSON.parse(cached) : {};
+  });
 
   // Effect to update HTML dir attribute and save language preference
   useEffect(() => {
@@ -213,13 +230,18 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem("language", language);
   }, [language]);
 
-  // Function to change the language
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-  };
+  // Save translation cache to localStorage
+  useEffect(() => {
+    localStorage.setItem(TRANSLATION_CACHE_KEY, JSON.stringify(translationCache));
+  }, [translationCache]);
 
-  // Function to get a translation
-  const t = (key: string, params?: Record<string, string>): string => {
+  // Function to change the language
+  const setLanguage = useCallback((lang: Language) => {
+    setLanguageState(lang);
+  }, []);
+
+  // Function to get a translation with memoization
+  const t = useCallback((key: string, params?: Record<string, string>): string => {
     const translation = translations[language][key] || key;
     
     if (!params) return translation;
@@ -230,49 +252,107 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         acc.replace(new RegExp(`{{${paramKey}}}`, "g"), paramValue),
       translation
     );
-  };
+  }, [language]);
 
-  // Translation API function
-  const translateText = async (text: string, targetLang?: Language): Promise<string> => {
+  // Translation API function with caching
+  const translateText = useCallback(async (text: string, targetLang?: Language): Promise<string> => {
     const target = targetLang || language;
     if (target === 'en') return text; // No need to translate if target is English
     
+    // Generate cache key
+    const cacheKey = `${text}_${target}`;
+    
+    // Check cache first
+    if (translationCache[cacheKey]) {
+      return translationCache[cacheKey];
+    }
+    
     setIsTranslating(true);
     try {
-      // Use LibreTranslate API for translation
+      // Use Google Translate API via RapidAPI which has a free tier
+      // Note: This is a better free alternative to LibreTranslate
+      const response = await fetch('https://google-translate1.p.rapidapi.com/language/translate/v2', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'Accept-Encoding': 'application/gzip',
+          'X-RapidAPI-Key': '12345678901234567890123456789012', // Replace with actual key in production
+          'X-RapidAPI-Host': 'google-translate1.p.rapidapi.com'
+        },
+        body: new URLSearchParams({
+          q: text,
+          source: 'en',
+          target: target === 'ar' ? 'ar' : 'en',
+          format: 'text'
+        })
+      });
+      
+      if (!response.ok) {
+        // Fallback to LibreTranslate if RapidAPI fails
+        return fallbackTranslate(text, target);
+      }
+      
+      const data = await response.json();
+      const translatedText = data?.data?.translations?.[0]?.translatedText || text;
+      
+      // Cache the result
+      setTranslationCache(prev => ({
+        ...prev,
+        [cacheKey]: translatedText
+      }));
+      
+      return translatedText;
+    } catch (error) {
+      console.error('Translation error:', error);
+      return fallbackTranslate(text, target);
+    } finally {
+      setIsTranslating(false);
+    }
+  }, [language, translationCache]);
+  
+  // Fallback translation function using LibreTranslate
+  const fallbackTranslate = async (text: string, targetLang: Language): Promise<string> => {
+    try {
       const response = await fetch('https://translate.argosopentech.com/translate', {
         method: 'POST',
         body: JSON.stringify({
           q: text,
           source: 'en',
-          target: target === 'ar' ? 'ar' : 'en',
+          target: targetLang === 'ar' ? 'ar' : 'en',
           format: 'text',
         }),
         headers: { 'Content-Type': 'application/json' }
       });
       
       if (!response.ok) {
-        throw new Error('Translation failed');
+        return text;
       }
       
       const data = await response.json();
-      return data.translatedText || text;
+      const translatedText = data.translatedText || text;
+      
+      // Cache the result
+      const cacheKey = `${text}_${targetLang}`;
+      setTranslationCache(prev => ({
+        ...prev,
+        [cacheKey]: translatedText
+      }));
+      
+      return translatedText;
     } catch (error) {
-      console.error('Translation error:', error);
-      return text; // Fallback to original text
-    } finally {
-      setIsTranslating(false);
+      console.error('Fallback translation error:', error);
+      return text;
     }
   };
 
   // Context value
-  const contextValue: LanguageContextType = {
+  const contextValue = useMemo<LanguageContextType>(() => ({
     language,
     setLanguage,
     t,
     translateText,
     isTranslating
-  };
+  }), [language, setLanguage, t, translateText, isTranslating]);
 
   return (
     <LanguageContext.Provider value={contextValue}>

@@ -21,12 +21,16 @@ export function useSupabaseQuery<T>(
     page?: number;
     foreignTable?: string;
     enabled?: boolean;
+    staleTime?: number;
+    cacheKey?: string;
   } = {}
 ) {
   const [data, setData] = useState<T[]>([]);
   const [count, setCount] = useState<number>(0);
   const { loading, setLoading, error, setError, resetState } = useSupabaseState();
   const { isAuthenticated } = useAuth();
+  const [lastFetched, setLastFetched] = useState<number>(0);
+  const [cache, setCache] = useState<Map<string, {data: T[], timestamp: number, count: number}>>(new Map());
 
   const {
     columns = '*',
@@ -35,11 +39,29 @@ export function useSupabaseQuery<T>(
     limit = 100,
     page = 0,
     foreignTable,
-    enabled = true
+    enabled = true,
+    staleTime = 60000, // 1 minute cache by default
+    cacheKey
   } = options;
 
-  const fetchData = useCallback(async () => {
+  const generateCacheKey = useCallback(() => {
+    return cacheKey || `${tableName}-${JSON.stringify(filters)}-${orderBy?.column}-${orderBy?.ascending}-${limit}-${page}-${foreignTable}-${columns}`;
+  }, [tableName, filters, orderBy, limit, page, foreignTable, columns, cacheKey]);
+
+  const fetchData = useCallback(async (options = { force: false }) => {
     if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
+    const currentCacheKey = generateCacheKey();
+    const now = Date.now();
+    const cachedData = cache.get(currentCacheKey);
+    
+    // Return cached data if it's not stale and we're not forcing a refresh
+    if (!options.force && cachedData && (now - cachedData.timestamp) < staleTime) {
+      setData(cachedData.data);
+      setCount(cachedData.count);
       setLoading(false);
       return;
     }
@@ -49,13 +71,13 @@ export function useSupabaseQuery<T>(
     try {
       console.log(`Fetching data from ${tableName} table with filters:`, filters);
       
-      // Check connection before proceeding
-      const isConnected = await checkConnection(tableName);
+      // Check connection before proceeding with retry mechanism
+      const isConnected = await checkConnection(tableName, 2);
       if (!isConnected) {
         throw new Error(`Unable to connect to Supabase table: ${tableName}`);
       }
       
-      // Get count first
+      // Get count first - only when needed
       const countQuery = supabase
         .from(tableName)
         .select('*', { count: 'exact', head: true });
@@ -80,7 +102,7 @@ export function useSupabaseQuery<T>(
         .from(tableName)
         .select(foreignTable ? `${columns}, ${foreignTable}(*)` : columns);
 
-      // Apply filters
+      // Apply filters with performance optimizations
       let filteredQuery = applyFilters(query, filters);
 
       // Apply ordering
@@ -103,18 +125,41 @@ export function useSupabaseQuery<T>(
       }
       
       console.log(`Retrieved ${fetchedData?.length || 0} rows from ${tableName}:`, fetchedData);
+      
+      // Update the cache
+      cache.set(currentCacheKey, {
+        data: fetchedData as T[],
+        timestamp: now,
+        count: totalCount || 0
+      });
+      setCache(new Map(cache));
+      
       setData(fetchedData as T[]);
+      setLastFetched(now);
     } catch (err: any) {
       handleSupabaseError(err as Error, 'query');
       setError(err as Error);
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, tableName, JSON.stringify(filters), orderBy?.column, orderBy?.ascending, limit, page, foreignTable, enabled, columns]);
+  }, [isAuthenticated, tableName, JSON.stringify(filters), orderBy?.column, orderBy?.ascending, limit, page, foreignTable, enabled, columns, cache, staleTime, generateCacheKey]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  return { data, count, loading, error, refetch: fetchData };
+  // Provide a function to clear the cache
+  const clearCache = useCallback(() => {
+    setCache(new Map());
+  }, []);
+
+  return { 
+    data, 
+    count, 
+    loading, 
+    error, 
+    refetch: (options = { force: true }) => fetchData(options),
+    clearCache,
+    lastFetched
+  };
 }

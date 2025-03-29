@@ -27,6 +27,21 @@ export const supabase = createClient<Database>(
         eventsPerSecond: 10,
       },
     },
+    // Add improved fetch configuration
+    fetch: (url, options) => {
+      const timeout = 30000; // 30s timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      return fetch(url, {
+        ...options,
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
+    },
+    // Improved db connection
+    db: {
+      schema: 'public',
+    },
   }
 );
 
@@ -54,22 +69,48 @@ export const getCurrentUserProfile = async () => {
   return { profile: data, error };
 };
 
-// Check the Supabase connection status
-export const checkSupabaseConnection = async () => {
-  try {
-    const { count, error } = await supabase
-      .from('clinics')
-      .select('*', { count: 'exact', head: true });
-    
-    return { 
-      connected: !error, 
-      error: error ? error.message : null 
-    };
-  } catch (error) {
-    console.error('Error checking Supabase connection:', error);
-    return { 
-      connected: false, 
-      error: error.message 
-    };
+// Check the Supabase connection status with retry mechanism
+export const checkSupabaseConnection = async (retries = 2) => {
+  let lastError = null;
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      console.log(`Connection attempt ${attempt + 1}/${retries + 1}`);
+      
+      // Test connection to clinics table which appears to be working
+      const { count, error } = await supabase
+        .from('clinics')
+        .select('*', { count: 'exact', head: true })
+        .limit(1);
+      
+      if (!error) {
+        console.log('Successfully connected to Supabase');
+        return { 
+          connected: true, 
+          error: null 
+        };
+      }
+      
+      lastError = error.message;
+      console.error('Error checking Supabase connection:', error);
+      
+      // Wait before retrying (except on the last attempt)
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    } catch (error) {
+      console.error('Exception checking Supabase connection:', error);
+      lastError = error.message;
+      
+      // Wait before retrying (except on the last attempt)
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
   }
+  
+  return { 
+    connected: false, 
+    error: lastError || 'Unable to connect to database' 
+  };
 };

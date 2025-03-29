@@ -11,6 +11,7 @@ import {
 
 export function useMutateSupabase() {
   const { loading, setLoading, error, setError, resetState } = useSupabaseState();
+  const [successData, setSuccessData] = useState<any>(null);
 
   const insert = async <T>(tableName: TableName, data: T) => {
     resetState();
@@ -22,8 +23,8 @@ export function useMutateSupabase() {
         throw new Error("No data provided for insert");
       }
       
-      // First verify connection
-      const isConnected = await checkConnection(tableName);
+      // First verify connection with retry mechanism
+      const isConnected = await checkConnection(tableName, 2);
       if (!isConnected) {
         throw new Error(`Database connection error: Unable to connect to ${tableName}`);
       }
@@ -39,6 +40,7 @@ export function useMutateSupabase() {
       }
       
       console.log(`Successfully inserted into ${tableName}:`, result);
+      setSuccessData(result);
       return result;
     } catch (err: any) {
       handleSupabaseError(err as Error, 'insert');
@@ -63,6 +65,12 @@ export function useMutateSupabase() {
         throw new Error("No data provided for update");
       }
       
+      // Check connection before proceeding
+      const isConnected = await checkConnection(tableName, 1);
+      if (!isConnected) {
+        throw new Error(`Database connection error: Unable to connect to ${tableName}`);
+      }
+      
       const { data: result, error } = await supabase
         .from(tableName)
         .update(data as any)
@@ -75,6 +83,7 @@ export function useMutateSupabase() {
       }
       
       console.log(`Successfully updated ${tableName}:`, result);
+      setSuccessData(result);
       return result;
     } catch (err: any) {
       handleSupabaseError(err as Error, 'update');
@@ -93,6 +102,12 @@ export function useMutateSupabase() {
       
       if (!id) {
         throw new Error("No ID provided for delete");
+      }
+      
+      // Check connection before proceeding
+      const isConnected = await checkConnection(tableName, 1);
+      if (!isConnected) {
+        throw new Error(`Database connection error: Unable to connect to ${tableName}`);
       }
       
       const { error } = await supabase
@@ -116,5 +131,52 @@ export function useMutateSupabase() {
     }
   };
 
-  return { insert, update, remove, loading, error };
+  // Batch operations for better performance
+  const batchInsert = async <T>(tableName: TableName, dataArray: T[]) => {
+    resetState();
+
+    try {
+      console.log(`Batch inserting ${dataArray.length} items into ${tableName}`);
+      
+      if (!dataArray || !dataArray.length) {
+        throw new Error("No data provided for batch insert");
+      }
+      
+      // First verify connection
+      const isConnected = await checkConnection(tableName, 2);
+      if (!isConnected) {
+        throw new Error(`Database connection error: Unable to connect to ${tableName}`);
+      }
+      
+      const { data: result, error } = await supabase
+        .from(tableName)
+        .insert(dataArray as any)
+        .select();
+
+      if (error) {
+        console.error(`Error batch inserting into ${tableName}:`, error);
+        throw error;
+      }
+      
+      console.log(`Successfully batch inserted into ${tableName}:`, result);
+      setSuccessData(result);
+      return result;
+    } catch (err: any) {
+      handleSupabaseError(err as Error, 'batch insert');
+      setError(err as Error);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { 
+    insert, 
+    update, 
+    remove, 
+    batchInsert,
+    loading, 
+    error,
+    successData 
+  };
 }

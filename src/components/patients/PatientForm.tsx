@@ -14,7 +14,7 @@ import { VoipInfoForm } from "./VoipInfoForm";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Profile, Clinic, Patient } from "@/types/supabase";
 import { CardContent, CardFooter } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutateSupabase } from "@/hooks/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -35,6 +35,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const { profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [connectionError, setConnectionError] = React.useState<string | null>(null);
+  const { insert, loading: insertLoading, error: insertError } = useMutateSupabase();
 
   // Initialize form with profile-specific default values
   const form = useForm<PatientFormValues>({
@@ -78,30 +79,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
       console.log("Sending patient data to Supabase:", patientData);
       
-      // Verify Supabase connection before insert
-      const connectionTest = await supabase.from('patients').select('id', { count: 'exact', head: true });
-      if (connectionTest.error) {
-        throw new Error(`Database connection error: ${connectionTest.error.message}`);
-      }
-      
-      // Direct Supabase insert to troubleshoot any issues
-      const { data: result, error } = await supabase
-        .from('patients')
-        .insert(patientData)
-        .select();
+      // Use the insert function from useMutateSupabase hook
+      const result = await insert<Patient>("patients", patientData);
       
       console.log("Insert result:", result);
-      
-      if (error) {
-        throw error;
-      }
       
       toast.success(t("patientAddedSuccessfully"));
       onSuccess();
     } catch (error: any) {
       console.error("Error adding patient:", error);
       setConnectionError(error.message);
-      toast.error(`Error adding patient: ${error.message || t("errorAddingPatient")}`);
+      toast.error(`${t("errorAddingPatient")}: ${error.message || ""}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -113,9 +101,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         <CardContent className="space-y-6">
           {connectionError && (
             <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-700 text-sm">
-              <p className="font-semibold">Connection Error</p>
+              <p className="font-semibold">{t("error")}</p>
               <p>{connectionError}</p>
-              <p className="mt-2">Please try again or contact support.</p>
+              <p className="mt-2">{t("tryAgainOrContactSupport")}</p>
             </div>
           )}
           
@@ -142,7 +130,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           <Button 
             type="submit" 
             className="bg-medical-teal hover:bg-teal-600"
-            disabled={isSubmitting}
+            disabled={isSubmitting || insertLoading}
           >
             {isSubmitting ? `${t("adding")}...` : t("addPatient")}
           </Button>
