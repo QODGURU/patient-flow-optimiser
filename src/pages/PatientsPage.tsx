@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Patient, PatientStatus } from "@/types";
+import { DatabasePatientStatus, Patient, PatientStatus, patientStatusToDatabaseStatus } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -52,23 +52,18 @@ const PatientsPage = () => {
 
       // Apply status filter if not "all"
       if (statusFilter !== "all") {
-        // Map our frontend PatientStatus to the database enum values
-        const dbPatientStatusMap: Record<string, string> = {
-          "pending": "Pending",
-          "contacted": "Contacted", 
-          "interested": "Interested",
-          "booked": "Booked",
-          "cold": "Cold",
-          "opt-out": "Opt-out"
-        };
-        
         // Make sure the status exists in our map before applying the filter
-        if (dbPatientStatusMap[statusFilter]) {
-          query = query.eq('status', dbPatientStatusMap[statusFilter]);
+        // The statusFilter is a string, but we need to ensure it's a valid PatientStatus
+        // before using it with our mapping object
+        const frontendStatus = statusFilter as PatientStatus;
+        if (patientStatusToDatabaseStatus[frontendStatus]) {
+          // TypeScript now knows this is a valid database status value 
+          const dbStatus = patientStatusToDatabaseStatus[frontendStatus] as DatabasePatientStatus;
+          query = query.eq('status', dbStatus);
         }
       }
       
-      // Apply search filter if there's a search term
+      
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }

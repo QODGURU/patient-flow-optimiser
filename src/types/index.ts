@@ -1,4 +1,3 @@
-
 export type UserRole = "doctor" | "admin";
 
 export interface User {
@@ -11,6 +10,19 @@ export interface User {
 }
 
 export type PatientStatus = "pending" | "contacted" | "interested" | "booked" | "cold" | "opt-out";
+
+// Helper type to map frontend PatientStatus to database-compatible status
+export type DatabasePatientStatus = "Interested" | "Not Interested" | "Pending" | "Contacted" | "Booked" | "Cold" | "Opt-out";
+
+// Map to convert from frontend PatientStatus to database status
+export const patientStatusToDatabaseStatus: Record<PatientStatus, DatabasePatientStatus> = {
+  "pending": "Pending",
+  "contacted": "Contacted",
+  "interested": "Interested",
+  "booked": "Booked",
+  "cold": "Cold",
+  "opt-out": "Opt-out"
+};
 
 export type FollowUpType = "call" | "message";
 export type FollowUpResponse = "yes" | "no" | "maybe" | "call_again" | null;
