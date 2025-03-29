@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { toast } from 'sonner';
+import { Profile } from '@/types/supabase';
 
 const SUPABASE_URL = "https://rcwcurpxbynaaxydivdx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjd2N1cnB4YnluYWF4eWRpdmR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxOTM4MzQsImV4cCI6MjA1ODc2OTgzNH0.oc_Hhs-dWDBrYd0ZrMT45AcjN3QUztZy_z311wSMN8Y";
@@ -116,6 +117,9 @@ export const createDemoAdminUser = async () => {
   console.log("Attempting to create demo admin user...");
   
   try {
+    // Generate a proper UUID for the demo admin
+    const demoUuid = crypto.randomUUID ? crypto.randomUUID() : 'demo-admin-id';
+    
     // Check if admin@example.com exists in profiles
     const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
@@ -135,11 +139,11 @@ export const createDemoAdminUser = async () => {
     }
     
     // Create a new demo admin profile with the correct role type
-    const demoProfile = {
-      id: "demo-admin-id",
+    const demoProfile: Profile = {
+      id: demoUuid,
       name: "Demo Admin",
       email: "admin@example.com",
-      role: "admin" as const, // Using 'as const' to ensure TypeScript knows this is exactly "admin"
+      role: "admin", // Using typed Profile from @/types/supabase
       phone: "+971551234567",
     };
     

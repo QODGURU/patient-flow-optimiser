@@ -252,7 +252,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         // Fallback to mock admin profile
         mockProfile = {
-          id: "bypass-admin-id",
+          id: crypto.randomUUID ? crypto.randomUUID() : "bypass-admin-id",
           name: "Admin Bypass",
           email: "admin@example.com",
           role: "admin",

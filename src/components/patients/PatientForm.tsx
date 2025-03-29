@@ -32,7 +32,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   clinics
 }) => {
   const { t } = useLanguage();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Initialize form with profile-specific default values
@@ -49,16 +49,19 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setIsSubmitting(true);
     console.log("Submitting patient form with values:", values);
     console.log("Current user profile:", profile);
+    console.log("Current session:", session);
     
     try {
       // Check authentication status directly
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session && !localStorage.getItem("admin_bypass")) {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const isAdminBypass = localStorage.getItem("admin_bypass");
+      
+      if (!currentSession && !isAdminBypass) {
         throw new Error("Authentication required. Please log in again.");
       }
       
       // Transform the data to match the patient table structure
-      const patientData = {
+      const patientData: Partial<Patient> = {
         name: values.name,
         age: values.age !== undefined && values.age !== null ? Number(values.age) : null,
         gender: values.gender,
@@ -70,7 +73,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         doctor_id: values.doctor_id || profile?.id || null,
         clinic_id: values.clinic_id || profile?.clinic_id || null,
         follow_up_required: values.follow_up_required,
-        status: "Pending" as const, // Ensuring TypeScript knows this is specifically "Pending"
+        status: "Pending", // Using the type from Patient interface
         preferred_time: values.preferred_time as "Morning" | "Afternoon" | "Evening" | undefined,
         preferred_channel: values.preferred_channel as "Call" | "SMS" | "Email" | undefined,
         availability_preferences: values.availability_preferences || null,
