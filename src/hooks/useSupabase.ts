@@ -47,6 +47,55 @@ export function useSupabaseQuery<T>(
     try {
       console.log(`Fetching data from ${tableName} table with filters:`, filters);
       
+      // Check for demo data in localStorage (for patients and follow_ups)
+      if ((tableName === 'patients' || tableName === 'follow_ups') && 
+          localStorage.getItem(`demo_${tableName}`)) {
+        try {
+          const demoData = JSON.parse(localStorage.getItem(`demo_${tableName}`) || '[]');
+          if (demoData.length > 0) {
+            console.log(`Using demo ${tableName} data from localStorage (${demoData.length} items)`);
+            
+            // Apply filters to demo data (basic implementation)
+            let filteredDemoData = [...demoData];
+            Object.entries(filters).forEach(([key, value]) => {
+              if (value !== undefined && value !== null) {
+                if (Array.isArray(value)) {
+                  filteredDemoData = filteredDemoData.filter(item => 
+                    value.includes(item[key as keyof typeof item])
+                  );
+                } else {
+                  filteredDemoData = filteredDemoData.filter(item => 
+                    item[key as keyof typeof item] === value
+                  );
+                }
+              }
+            });
+            
+            // Apply ordering (basic implementation)
+            if (orderBy) {
+              filteredDemoData.sort((a, b) => {
+                const aValue = a[orderBy.column as keyof typeof a];
+                const bValue = b[orderBy.column as keyof typeof b];
+                
+                if (aValue < bValue) return orderBy.ascending ? -1 : 1;
+                if (aValue > bValue) return orderBy.ascending ? 1 : -1;
+                return 0;
+              });
+            }
+            
+            // Apply pagination
+            const paginatedData = filteredDemoData.slice(page * limit, (page + 1) * limit);
+            
+            setData(paginatedData as T[]);
+            setCount(filteredDemoData.length);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error(`Error parsing demo ${tableName} data:`, e);
+        }
+      }
+      
       // Get count first
       const countQuery = supabase
         .from(tableName)
@@ -117,7 +166,11 @@ export function useSupabaseQuery<T>(
     } catch (err: any) {
       console.error("Supabase query error:", err);
       setError(err as Error);
-      toast.error(`Error fetching data: ${err.message || 'Unknown error'}`);
+      if (err.message.includes("row-level security policy")) {
+        toast.error(`Permission error: You don't have access to this data. Using demo mode.`);
+      } else {
+        toast.error(`Error fetching data: ${err.message || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,4 @@
-
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Patient, FollowUp } from "@/types/supabase";
@@ -31,6 +30,8 @@ export interface DashboardDataProps {
 export const DashboardData = ({ children }: DashboardDataProps) => {
   const { profile } = useAuth();
   const isAdmin = profile?.role === "admin";
+  const [demoPatients, setDemoPatients] = useState<Patient[]>([]);
+  const [demoFollowUps, setDemoFollowUps] = useState<FollowUp[]>([]);
 
   // Fetch patients data
   const { data: patients, loading: patientsLoading } = useSupabaseQuery<Patient>("patients", {
@@ -42,16 +43,42 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
     orderBy: { column: "created_at", ascending: false },
   });
 
+  // Load demo data if available
+  useEffect(() => {
+    const storedDemoPatients = localStorage.getItem("demo_patients");
+    const storedDemoFollowUps = localStorage.getItem("demo_follow_ups");
+    
+    if (storedDemoPatients && patients.length === 0) {
+      try {
+        setDemoPatients(JSON.parse(storedDemoPatients));
+      } catch (e) {
+        console.error("Error parsing demo patients:", e);
+      }
+    }
+    
+    if (storedDemoFollowUps && followUps.length === 0) {
+      try {
+        setDemoFollowUps(JSON.parse(storedDemoFollowUps));
+      } catch (e) {
+        console.error("Error parsing demo follow-ups:", e);
+      }
+    }
+  }, [patients, followUps]);
+
+  // Use either real data or demo data
+  const displayPatients = patients.length > 0 ? patients : demoPatients;
+  const displayFollowUps = followUps.length > 0 ? followUps : demoFollowUps;
+
   // Filter patients based on role
   const filteredPatients = useMemo(() => {
     return isAdmin
-      ? patients
-      : patients.filter((patient) => patient.doctor_id === profile?.id);
-  }, [isAdmin, patients, profile?.id]);
+      ? displayPatients
+      : displayPatients.filter((patient) => patient.doctor_id === profile?.id);
+  }, [isAdmin, displayPatients, profile?.id]);
 
   // Count patients by status
   const patientStatusCounts = useMemo(() => {
-    if (patientsLoading || !filteredPatients.length) {
+    if ((patientsLoading && !demoPatients.length) || !filteredPatients.length) {
       return getSampleStatusData();
     }
     
@@ -65,11 +92,11 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
       status,
       count,
     }));
-  }, [filteredPatients, patientsLoading]);
+  }, [filteredPatients, patientsLoading, demoPatients.length]);
 
   // Count follow-ups by type
   const followUpCounts = useMemo(() => {
-    if (followUpsLoading || patientsLoading || !filteredPatients.length) {
+    if ((followUpsLoading && !demoFollowUps.length) || (patientsLoading && !demoPatients.length) || !filteredPatients.length) {
       return {
         call: 35,
         message: 42,
@@ -87,7 +114,7 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
     const interested = filteredPatients.filter(p => p.status === 'Interested').length;
     const notInterested = filteredPatients.filter(p => p.status === 'Not Interested').length;
     
-    const stats = followUps.reduce((acc, followUp) => {
+    const stats = displayFollowUps.reduce((acc, followUp) => {
       if (followUp.type.toLowerCase().includes('call')) {
         acc.call += 1;
       } else if (followUp.type.toLowerCase().includes('message') || followUp.type.toLowerCase().includes('sms')) {
@@ -98,16 +125,16 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
     }, { call: 0, message: 0, total: 0, pending, interested, notInterested });
     
     return stats;
-  }, [followUps, followUpsLoading, filteredPatients, patientsLoading]);
+  }, [displayFollowUps, followUpsLoading, filteredPatients, patientsLoading, demoFollowUps.length, demoPatients.length]);
 
   // Create data for follow-up trend chart
   const followUpTrendData = useMemo(() => {
-    if (followUpsLoading || !followUps.length) {
+    if ((followUpsLoading && !demoFollowUps.length) || !displayFollowUps.length) {
       return getSampleFollowUpTrendData();
     }
     
     // Group follow-ups by date
-    const grouped = followUps.reduce((acc, followUp) => {
+    const grouped = displayFollowUps.reduce((acc, followUp) => {
       const date = followUp.date;
       if (!acc[date]) {
         acc[date] = { date, calls: 0, messages: 0, responses: 0 };
@@ -132,11 +159,11 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
       .slice(-6); // Last 6 dates with data
       
     return data.length ? data : getSampleFollowUpTrendData();
-  }, [followUps, followUpsLoading]);
+  }, [displayFollowUps, followUpsLoading, demoFollowUps.length]);
   
   // Conversion rate by doctor data
   const conversionRateData = useMemo(() => {
-    if (patientsLoading || !filteredPatients.length) {
+    if ((patientsLoading && !demoPatients.length) || !filteredPatients.length) {
       return getSampleConversionRateData();
     }
     
@@ -166,11 +193,11 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
     
     const result = Object.values(doctorStats);
     return result.length ? result : getSampleConversionRateData();
-  }, [filteredPatients, patientsLoading]);
+  }, [filteredPatients, patientsLoading, demoPatients.length]);
 
   // Interaction outcome distribution
   const interactionOutcomes = useMemo(() => {
-    if (patientsLoading || !filteredPatients.length) {
+    if ((patientsLoading && !demoPatients.length) || !filteredPatients.length) {
       return [
         { outcome: "Yes", count: 43 },
         { outcome: "No", count: 21 },
@@ -191,11 +218,11 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
       outcome,
       count,
     }));
-  }, [filteredPatients, patientsLoading]);
+  }, [filteredPatients, patientsLoading, demoPatients.length]);
 
   // Treatment categories distribution
   const treatmentCategories = useMemo(() => {
-    if (patientsLoading || !filteredPatients.length) {
+    if ((patientsLoading && !demoPatients.length) || !filteredPatients.length) {
       return [
         { category: "Dental", count: 32 },
         { category: "Orthodontics", count: 28 },
@@ -215,11 +242,11 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
       category,
       count,
     }));
-  }, [filteredPatients, patientsLoading]);
+  }, [filteredPatients, patientsLoading, demoPatients.length]);
 
   // Channel preference distribution
   const channelPreferences = useMemo(() => {
-    if (patientsLoading || !filteredPatients.length) {
+    if ((patientsLoading && !demoPatients.length) || !filteredPatients.length) {
       return [
         { channel: "Call", count: 45 },
         { channel: "SMS", count: 32 },
@@ -238,11 +265,11 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
       channel,
       count,
     }));
-  }, [filteredPatients, patientsLoading]);
+  }, [filteredPatients, patientsLoading, demoPatients.length]);
 
   // Time preference distribution
   const timePreferences = useMemo(() => {
-    if (patientsLoading || !filteredPatients.length) {
+    if ((patientsLoading && !demoPatients.length) || !filteredPatients.length) {
       return [
         { time: "Morning", count: 38 },
         { time: "Afternoon", count: 29 },
@@ -261,11 +288,11 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
       time,
       count,
     }));
-  }, [filteredPatients, patientsLoading]);
+  }, [filteredPatients, patientsLoading, demoPatients.length]);
 
   // Conversion rate over time (interested / total patients per week)
   const conversionTrend = useMemo(() => {
-    if (patientsLoading || !filteredPatients.length) {
+    if ((patientsLoading && !demoPatients.length) || !filteredPatients.length) {
       return getSampleConversionTrendData();
     }
     
@@ -299,21 +326,22 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
       }));
       
     return result.length > 0 ? result : getSampleConversionTrendData();
-  }, [filteredPatients, patientsLoading]);
+  }, [filteredPatients, patientsLoading, demoPatients.length]);
 
   // Get recent follow-ups
   const recentFollowUps = useMemo(() => {
-    if (followUpsLoading || patientsLoading || !followUps.length || !filteredPatients.length) {
+    if ((followUpsLoading && !demoFollowUps.length) || (patientsLoading && !demoPatients.length) || 
+        !displayFollowUps.length || !filteredPatients.length) {
       return getSampleRecentFollowUps();
     }
     
-    return followUps
+    return displayFollowUps
       .slice(0, 5)
       .map(followUp => {
         const patient = filteredPatients.find(p => p.id === followUp.patient_id);
         return { ...followUp, patientName: patient?.name || 'Unknown' };
       });
-  }, [followUps, filteredPatients, followUpsLoading, patientsLoading]);
+  }, [displayFollowUps, filteredPatients, followUpsLoading, patientsLoading, demoFollowUps.length, demoPatients.length]);
 
   return children({
     patientStatusCounts,
@@ -326,12 +354,11 @@ export const DashboardData = ({ children }: DashboardDataProps) => {
     interactionOutcomes,
     conversionTrend,
     recentFollowUps,
-    patientsLoading,
-    followUpsLoading
+    patientsLoading: patientsLoading && !demoPatients.length,
+    followUpsLoading: followUpsLoading && !demoFollowUps.length
   });
 };
 
-// Sample data for when we don't have real data
 function getSampleStatusData() {
   return [
     { status: "Interested", count: 37 },

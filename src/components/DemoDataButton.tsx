@@ -27,12 +27,13 @@ export const DemoDataButton = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   
-  // Check if we already have data
+  // Check if we already have data (either in supabase or in localStorage)
   const { data: patients } = useSupabaseQuery<Patient>("patients", {
     limit: 1,
   });
   
-  const hasData = patients.length > 0;
+  const demoDataExists = localStorage.getItem("demo_patients");
+  const hasData = patients.length > 0 || !!demoDataExists;
   
   const handleGenerateData = async () => {
     setIsGenerating(true);
@@ -58,9 +59,9 @@ export const DemoDataButton = () => {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
-              variant="outline" 
+              variant={hasData ? "outline" : "default"}
               size="sm"
-              className="flex items-center gap-1"
+              className={`flex items-center gap-1 ${!hasData ? "bg-gradient-to-r from-[#101B4C] to-[#00FFC8] hover:opacity-90 text-white" : ""}`}
               onClick={handleGenerateData}
               disabled={isGenerating || hasData}
             >
@@ -71,7 +72,7 @@ export const DemoDataButton = () => {
           <TooltipContent>
             {hasData 
               ? "Demo data already exists" 
-              : "Generate 30+ patients and follow-ups"}
+              : "Generate 20 patients and follow-ups"}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

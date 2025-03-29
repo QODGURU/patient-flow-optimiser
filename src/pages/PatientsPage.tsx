@@ -57,6 +57,7 @@ import { useSupabaseQuery, useMutateSupabase } from "@/hooks/useSupabase";
 import { Patient, FollowUp, Profile, Clinic } from "@/types/supabase";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DemoDataButton } from "@/components/DemoDataButton";
 
 const ITEMS_PER_PAGE = 20;
 const DEFAULT_COLUMNS = ["name", "phone", "treatment", "price", "status", "clinic", "actions"];
@@ -72,6 +73,7 @@ const PatientsPage = () => {
   const [visibleColumns, setVisibleColumns] = useState<string[]>(DEFAULT_COLUMNS);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
+  const [demoPatients, setDemoPatients] = useState<Patient[]>([]);
 
   // Data fetching hooks
   const { data: patients, loading: patientsLoading, count: totalPatients, refetch: refetchPatients } = 
@@ -88,6 +90,18 @@ const PatientsPage = () => {
   });
 
   const { remove, loading: deleteLoading } = useMutateSupabase();
+
+  // Load demo data from localStorage if available
+  useEffect(() => {
+    const storedDemoPatients = localStorage.getItem("demo_patients");
+    if (storedDemoPatients && patients.length === 0) {
+      try {
+        setDemoPatients(JSON.parse(storedDemoPatients));
+      } catch (e) {
+        console.error("Error parsing demo patients:", e);
+      }
+    }
+  }, [patients]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -129,8 +143,11 @@ const PatientsPage = () => {
     { id: "actions", name: "Actions" },
   ];
 
+  // Use either real data or demo data
+  const displayPatients = patients.length > 0 ? patients : demoPatients;
+
   // Filter patients based on search term and status
-  const filteredPatients = patients.filter(
+  const filteredPatients = displayPatients.filter(
     (patient) => {
       const matchesSearch = 
         patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -145,7 +162,8 @@ const PatientsPage = () => {
     }
   );
 
-  const totalPages = Math.ceil(totalPatients / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalPatients / ITEMS_PER_PAGE) || 
+                    Math.ceil(demoPatients.length / ITEMS_PER_PAGE);
 
   const toggleColumn = (columnId: string) => {
     setVisibleColumns(current => 
@@ -159,9 +177,18 @@ const PatientsPage = () => {
     if (!patientToDelete) return;
     
     try {
-      await remove("patients", patientToDelete);
-      toast.success("Patient deleted successfully");
-      refetchPatients();
+      // If using demo data, just remove from localStorage
+      if (patients.length === 0 && demoPatients.length > 0) {
+        const updatedDemoPatients = demoPatients.filter(p => p.id !== patientToDelete);
+        localStorage.setItem("demo_patients", JSON.stringify(updatedDemoPatients));
+        setDemoPatients(updatedDemoPatients);
+        toast.success("Demo patient deleted");
+      } else {
+        // Otherwise use real delete
+        await remove("patients", patientToDelete);
+        toast.success("Patient deleted successfully");
+        refetchPatients();
+      }
     } catch (error) {
       // Error is handled in the mutation hook
     } finally {
@@ -308,11 +335,14 @@ const PatientsPage = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-[#101B4C]">Patients</h1>
-        <Link to="/add-patient">
-          <Button className="bg-gradient-to-r from-[#101B4C] to-[#00FFC8] hover:opacity-90">
-            <FilePlus className="mr-2 h-4 w-4" /> Add Patient
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <DemoDataButton />
+          <Link to="/add-patient">
+            <Button className="bg-gradient-to-r from-[#101B4C] to-[#00FFC8] hover:opacity-90">
+              <FilePlus className="mr-2 h-4 w-4" /> Add Patient
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -435,14 +465,17 @@ const PatientsPage = () => {
                       <p className="text-sm text-[#2B2E33]/60 mb-4">
                         {searchTerm || statusFilter !== "all"
                           ? "Try changing your search or filter criteria"
-                          : "Start by adding a new patient"}
+                          : "Start by adding a new patient or generating demo data"}
                       </p>
                       {!searchTerm && statusFilter === "all" && (
-                        <Link to="/add-patient">
-                          <Button className="bg-gradient-to-r from-[#101B4C] to-[#00FFC8] hover:opacity-90">
-                            <FilePlus className="mr-2 h-4 w-4" /> Add Patient
-                          </Button>
-                        </Link>
+                        <div className="flex gap-3">
+                          <DemoDataButton />
+                          <Link to="/add-patient">
+                            <Button className="bg-gradient-to-r from-[#101B4C] to-[#00FFC8] hover:opacity-90">
+                              <FilePlus className="mr-2 h-4 w-4" /> Add Patient
+                            </Button>
+                          </Link>
+                        </div>
                       )}
                     </div>
                   </TableCell>
