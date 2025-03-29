@@ -2,22 +2,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FollowUpItem } from "./FollowUpItem";
 import { Loader2 } from "lucide-react";
+import { MergedFollowUp } from "@/types/followUp";
 
 interface RecentFollowUpsProps {
-  followUps: Array<{
-    id: string;
-    patientName: string;
-    clinicName: string;
-    doctorId?: string;
-    type: string;
-    date: string;
-    time: string;
-    notes?: string;
-    response: string | null;
-    // For compatibility with both data structures
-    patient_id?: string;
-    patientId?: string;
-  }>;
+  followUps: MergedFollowUp[];
   isLoading?: boolean;
 }
 

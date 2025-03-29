@@ -1,100 +1,62 @@
 
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Phone, MessageSquare } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatDistanceToNow } from "date-fns";
+import { MessageCircle, Phone } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MergedFollowUp } from "@/types/followUp";
 
 interface FollowUpItemProps {
-  followUp: {
-    id: string;
-    patientName: string;
-    clinicName: string;
-    doctorId?: string;
-    type: string;
-    date: string;
-    time: string;
-    notes?: string;
-    response: string | null;
-    // For compatibility with both data structures
-    patient_id?: string;
-    patientId?: string;
-  };
+  followUp: MergedFollowUp;
 }
 
 export const FollowUpItem = ({ followUp }: FollowUpItemProps) => {
-  // Determine which ID to use for patient routing
-  const patientRouteId = followUp.patientId || followUp.patient_id;
-
+  const { profile } = useAuth();
+  
+  // Format the date to relative time
+  const timeAgo = followUp.created_at 
+    ? formatDistanceToNow(new Date(followUp.created_at), { addSuffix: true })
+    : "recently";
+  
+  // Check if the follow-up was created by the current user
+  const isCreatedByCurrentUser = followUp.created_by === profile?.id;
+  
   return (
-    <div
-      key={followUp.id}
-      className="border rounded-lg p-4 bg-gray-50"
-    >
-      <div className="flex justify-between items-start mb-3">
+    <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+      <div className="flex items-start justify-between">
         <div>
-          <Link to={`/patients/${patientRouteId}`}>
-            <h3 className="font-medium text-medical-navy hover:underline">
-              {followUp.patientName}
-            </h3>
-          </Link>
-          <p className="text-sm text-gray-500">
-            {followUp.clinicName}
-          </p>
-        </div>
-        <div className="flex items-center">
-          {followUp.type.toLowerCase().includes("call") ? (
-            <div className="bg-yellow-100 p-2 rounded-full">
-              <Phone className="h-4 w-4 text-yellow-700" />
-            </div>
-          ) : (
-            <div className="bg-purple-100 p-2 rounded-full">
-              <MessageSquare className="h-4 w-4 text-purple-700" />
-            </div>
+          <div className="flex items-center gap-2">
+            <h4 className="font-medium">{followUp.patientName}</h4>
+            <Badge variant={followUp.type === "call" ? "default" : "secondary"} className="text-xs">
+              {followUp.type === "call" ? (
+                <Phone className="h-3 w-3 mr-1" />
+              ) : (
+                <MessageCircle className="h-3 w-3 mr-1" />
+              )}
+              {followUp.type}
+            </Badge>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">{followUp.clinicName}</p>
+          {followUp.notes && (
+            <p className="mt-2 text-sm text-gray-600">{followUp.notes}</p>
           )}
         </div>
-      </div>
-      
-      <div className="flex justify-between items-center">
-        <div className="flex items-center text-sm text-gray-500">
-          <Calendar className="h-3 w-3 mr-1" />
-          {followUp.date}
-          <Clock className="h-3 w-3 ml-2 mr-1" />
-          {followUp.time}
+        <div className="text-right">
+          <p className="text-xs text-gray-500">{timeAgo}</p>
+          {followUp.response ? (
+            <Badge 
+              variant={
+                followUp.response === "interested" ? "success" : 
+                followUp.response === "not_interested" ? "destructive" : 
+                "outline"
+              }
+              className="mt-1"
+            >
+              {followUp.response}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="mt-1">pending</Badge>
+          )}
         </div>
-        
-        {followUp.response ? (
-          <span
-            className={`text-xs px-2 py-1 rounded-full ${
-              followUp.response === "yes"
-                ? "bg-green-100 text-green-800"
-                : followUp.response === "no"
-                ? "bg-red-100 text-red-800"
-                : "bg-blue-100 text-blue-800"
-            }`}
-          >
-            {followUp.response === "call_again"
-              ? "Call Again"
-              : followUp.response.charAt(0).toUpperCase() +
-                followUp.response.slice(1)}
-          </span>
-        ) : (
-          <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800">
-            No Response
-          </span>
-        )}
-      </div>
-      
-      {followUp.notes && (
-        <div className="mt-3 pt-3 border-t">
-          <p className="text-sm">{followUp.notes}</p>
-        </div>
-      )}
-      
-      <div className="mt-3 flex justify-end">
-        <Link to={`/patients/${patientRouteId}`}>
-          <Button variant="outline" size="sm">
-            View Patient
-          </Button>
-        </Link>
       </div>
     </div>
   );

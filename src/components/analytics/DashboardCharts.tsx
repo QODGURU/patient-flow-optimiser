@@ -1,9 +1,9 @@
 
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ConversionRateChart } from "./ConversionRateChart";
-import { FollowUpTrendChart } from "./FollowUpTrendChart";
-import { PatientStatusChart } from "./PatientStatusChart";
+import ConversionRateChart from "./ConversionRateChart";
+import FollowUpTrendChart from "./FollowUpTrendChart";
+import PatientStatusChart from "./PatientStatusChart";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 
