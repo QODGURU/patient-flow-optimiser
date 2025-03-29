@@ -73,9 +73,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         doctor_id: values.doctor_id || profile?.id || null,
         clinic_id: values.clinic_id || profile?.clinic_id || null,
         follow_up_required: values.follow_up_required,
-        status: "Pending", // Using the type from Patient interface
-        preferred_time: values.preferred_time,
-        preferred_channel: values.preferred_channel,
+        status: "Pending" as const, // Using the type from Patient interface
+        preferred_time: values.preferred_time as "Morning" | "Afternoon" | "Evening" | null,
+        preferred_channel: values.preferred_channel as "Call" | "SMS" | "Email" | null,
         availability_preferences: values.availability_preferences || null,
         notes: values.notes || null,
         script: values.script || null,
