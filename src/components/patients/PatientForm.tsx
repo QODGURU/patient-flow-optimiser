@@ -60,12 +60,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         throw new Error("Authentication required. Please log in again.");
       }
       
-      // Transform the data to match the patient table structure
-      const patientData: Partial<Patient> = {
-        name: values.name,
+      // Transform the data to match the patient table structure without using Partial<Patient>
+      const patientData = {
+        name: values.name, // Required field
         age: values.age !== undefined && values.age !== null ? Number(values.age) : null,
         gender: values.gender,
-        phone: values.phone,
+        phone: values.phone, // Required field
         email: values.email || null,
         treatment_category: values.treatment_category || null,
         treatment_type: values.treatment_type || null,
@@ -74,8 +74,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         clinic_id: values.clinic_id || profile?.clinic_id || null,
         follow_up_required: values.follow_up_required,
         status: "Pending", // Using the type from Patient interface
-        preferred_time: values.preferred_time as "Morning" | "Afternoon" | "Evening" | undefined,
-        preferred_channel: values.preferred_channel as "Call" | "SMS" | "Email" | undefined,
+        preferred_time: values.preferred_time,
+        preferred_channel: values.preferred_channel,
         availability_preferences: values.availability_preferences || null,
         notes: values.notes || null,
         script: values.script || null,
