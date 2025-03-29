@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const { t } = useLanguage();
   const { profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [connectionError, setConnectionError] = React.useState<string | null>(null);
 
   // Initialize form with profile-specific default values
   const form = useForm<PatientFormValues>({
@@ -46,6 +48,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   const onSubmit = async (values: PatientFormValues) => {
     setIsSubmitting(true);
+    setConnectionError(null);
     console.log("Submitting patient form with values:", values);
     
     try {
@@ -75,6 +78,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
       console.log("Sending patient data to Supabase:", patientData);
       
+      // Verify Supabase connection before insert
+      const connectionTest = await supabase.from('patients').select('id', { count: 'exact', head: true });
+      if (connectionTest.error) {
+        throw new Error(`Database connection error: ${connectionTest.error.message}`);
+      }
+      
       // Direct Supabase insert to troubleshoot any issues
       const { data: result, error } = await supabase
         .from('patients')
@@ -91,6 +100,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       onSuccess();
     } catch (error: any) {
       console.error("Error adding patient:", error);
+      setConnectionError(error.message);
       toast.error(`Error adding patient: ${error.message || t("errorAddingPatient")}`);
     } finally {
       setIsSubmitting(false);
@@ -101,6 +111,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <CardContent className="space-y-6">
+          {connectionError && (
+            <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-700 text-sm">
+              <p className="font-semibold">Connection Error</p>
+              <p>{connectionError}</p>
+              <p className="mt-2">Please try again or contact support.</p>
+            </div>
+          )}
+          
           <PersonalInfoForm control={form.control} />
           <TreatmentInfoForm control={form.control} />
           <FollowUpPreferencesForm control={form.control} />

@@ -1,8 +1,8 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 // Use string literal type for tables instead of using api_configurations which isn't in the database schema
 type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings';
@@ -36,7 +36,7 @@ export function useSupabaseQuery<T>(
   } = options;
 
   const fetchData = useCallback(async () => {
-    if (!isAuthenticated || !enabled) {
+    if (!enabled) {
       setLoading(false);
       return;
     }
@@ -46,6 +46,17 @@ export function useSupabaseQuery<T>(
 
     try {
       console.log(`Fetching data from ${tableName} table with filters:`, filters);
+      
+      // Check if Supabase is accessible before querying
+      try {
+        const connectionTest = await supabase.rpc('get_service_status');
+        if (connectionTest.error) {
+          throw new Error(`Supabase connection error: ${connectionTest.error.message}`);
+        }
+      } catch (connErr) {
+        // Fallback to a simpler test if rpc is not available
+        console.warn("Service status check failed, trying direct table access");
+      }
       
       // Get count first
       const countQuery = supabase
@@ -143,6 +154,15 @@ export function useMutateSupabase() {
       
       if (!data) {
         throw new Error("No data provided for insert");
+      }
+      
+      // First verify connection
+      const connectionTest = await supabase
+        .from(tableName)
+        .select('*', { count: 'exact', head: true });
+        
+      if (connectionTest.error) {
+        throw new Error(`Database connection error: ${connectionTest.error.message}`);
       }
       
       const { data: result, error } = await supabase

@@ -12,13 +12,19 @@ export const supabase = createClient<Database>(
   {
     auth: {
       persistSession: true,
-      storage: localStorage,
       autoRefreshToken: true,
-      debug: true, // Enable debug mode for better error logging
+      detectSessionInUrl: true,
+      storageKey: 'sb-rcwcurpxbynaaxydivdx-auth-token',
     },
     global: {
       headers: {
         'Content-Type': 'application/json',
+      },
+    },
+    // Add realtime subscriptions
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
       },
     },
   }
@@ -46,4 +52,24 @@ export const getCurrentUserProfile = async () => {
     .single();
     
   return { profile: data, error };
+};
+
+// Check the Supabase connection status
+export const checkSupabaseConnection = async () => {
+  try {
+    const { count, error } = await supabase
+      .from('clinics')
+      .select('*', { count: 'exact', head: true });
+    
+    return { 
+      connected: !error, 
+      error: error ? error.message : null 
+    };
+  } catch (error) {
+    console.error('Error checking Supabase connection:', error);
+    return { 
+      connected: false, 
+      error: error.message 
+    };
+  }
 };

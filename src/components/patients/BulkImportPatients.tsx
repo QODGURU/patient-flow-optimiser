@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMutateSupabase } from "@/hooks/useSupabase";
 import { Patient } from "@/types/supabase";
 import FileUploader from "@/components/FileUploader";
-import { DownloadCloud, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { DownloadCloud, FileSpreadsheet, AlertCircle, InfoIcon } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BulkImportPatientsProps {
   onSuccess: () => void;
@@ -23,6 +25,10 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
   const { t } = useLanguage();
   const { profile } = useAuth();
   const { insert } = useMutateSupabase();
+  const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; error: string | null }>({
+    connected: true,
+    error: null
+  });
   const [importStatus, setImportStatus] = useState<{
     processing: boolean;
     success: number;
@@ -34,6 +40,34 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
     error: 0,
     total: 0
   });
+
+  // Check Supabase connection on component mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('patients')
+          .select('*', { count: 'exact', head: true });
+        
+        setConnectionStatus({
+          connected: !error,
+          error: error ? error.message : null
+        });
+        
+        if (error) {
+          console.error("Database connection error:", error);
+        }
+      } catch (err) {
+        console.error("Error checking connection:", err);
+        setConnectionStatus({
+          connected: false,
+          error: err.message
+        });
+      }
+    };
+    
+    checkConnection();
+  }, []);
 
   const handleFileAccepted = async (file: File) => {
     console.log("File accepted:", file.name);
@@ -47,6 +81,11 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
     });
     
     try {
+      // Check connection before proceeding
+      if (!connectionStatus.connected) {
+        throw new Error(`Database connection error: ${connectionStatus.error}`);
+      }
+      
       const reader = new FileReader();
       
       reader.onload = async (e) => {
@@ -115,7 +154,16 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
               };
               
               console.log("Inserting patient data:", patientData);
-              await insert<Patient>("patients", patientData as Patient);
+              // Direct insert approach rather than using the hook to bypass any potential issues
+              const { data, error } = await supabase
+                .from('patients')
+                .insert(patientData)
+                .select();
+                
+              if (error) {
+                throw error;
+              }
+              
               successCount++;
               
               // Update counts as we progress
@@ -179,6 +227,16 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
   return (
     <>
       <CardContent className="space-y-6">
+        {!connectionStatus.connected && (
+          <Alert className="bg-red-50 border-red-200">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertTitle>Database Connection Error</AlertTitle>
+            <AlertDescription>
+              {connectionStatus.error || "Unable to connect to the database. Please try again later."}
+            </AlertDescription>
+          </Alert>
+        )}
+      
         <div className="space-y-1">
           <h3 className="text-sm font-medium">File Requirements</h3>
           <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1">
