@@ -23,6 +23,8 @@ const PatientStatusChart = ({ data, title, className, loading = false }: Patient
   const { t } = useLanguage();
   
   const chartData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
     return data.map(item => ({
       name: t(item.status),
       value: item.count
@@ -40,7 +42,7 @@ const PatientStatusChart = ({ data, title, className, loading = false }: Patient
             <div className="flex items-center justify-center h-full">
               <Skeleton className="h-48 w-48 rounded-full" />
             </div>
-          ) : (
+          ) : chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -66,6 +68,10 @@ const PatientStatusChart = ({ data, title, className, loading = false }: Patient
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              No data available
+            </div>
           )}
         </div>
       </CardContent>

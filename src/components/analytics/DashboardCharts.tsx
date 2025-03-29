@@ -112,7 +112,9 @@ export const CategoryDistributionChart = ({
     <ConversionRateChart
       data={data.map(item => ({
         doctor: item[dataKey],
-        contacted: item[valueKey]
+        contacted: item[valueKey],
+        interested: 0, // Add missing required properties
+        booked: 0      // Add missing required properties
       }))}
       title={title}
       description={description}
@@ -153,7 +155,9 @@ export const BarChartVertical = ({
     <ConversionRateChart
       data={data.map(item => ({
         doctor: item[categoryKey],
-        contacted: item[valueKey]
+        contacted: item[valueKey],
+        interested: 0, // Add missing required properties
+        booked: 0      // Add missing required properties
       }))}
       title={title}
       description={description}
@@ -203,7 +207,8 @@ export const TrendLineChart = ({
     <FollowUpTrendChart
       data={data.map(item => ({
         date: item[xAxisKey],
-        calls: item[lineKey]
+        calls: item[lineKey],
+        messages: 0 // Add missing required property
       }))}
       title={title}
       description={description}

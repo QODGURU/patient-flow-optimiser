@@ -187,15 +187,17 @@ export const generateDemoData = async () => {
     // Check if there's already patient data
     const { data: existingPatients, error: patientError } = await supabase
       .from("patients")
-      .select("count", { count: "exact", head: true });
+      .select("id");
       
     if (patientError) {
       throw patientError;
     }
     
     // Only generate data if there are no patients
-    if (existingPatients?.count && existingPatients.count > 0) {
+    if (existingPatients && existingPatients.length > 0) {
       console.log("Data already exists, skipping demo data generation");
+      toast.info("Data already exists. Refreshing the page to load existing data.");
+      window.location.reload();
       return;
     }
     
@@ -243,6 +245,9 @@ export const generateDemoData = async () => {
     
     console.log(`Successfully created ${followUpData.length} demo follow-ups`);
     toast.success("Demo data generated successfully!");
+    
+    // Reload the page to see the new data
+    window.location.reload();
     
     return { patients: patientData, followUps: followUpData };
   } catch (error) {

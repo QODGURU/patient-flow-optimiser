@@ -1,8 +1,8 @@
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, PhoneCall, MessageSquare, Star, ThumbsUp, AlertTriangle, Calendar, Database } from "lucide-react";
+import { Users, PhoneCall, MessageSquare, Star, AlertTriangle, Calendar, Database } from "lucide-react";
 import { DashboardData } from "@/components/analytics/DashboardData";
 import { DashboardCharts } from "@/components/analytics/DashboardCharts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,12 +49,12 @@ const DashboardPage = () => {
 
       {/* Stats Cards */}
       <DashboardData>
-        {({ followUpCounts, patientsLoading, followUpsLoading, filteredPatients, recentFollowUps }) => (
+        {({ followUpCounts, patientsLoading, followUpsLoading, recentFollowUps }) => (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
               <StatCard
                 title="Total Patients"
-                value={filteredPatients?.length || 0}
+                value={followUpCounts.total || 0}
                 loading={patientsLoading}
                 icon={<Users className="h-6 w-6 text-[#101B4C]" />}
                 iconBgColor="bg-[#101B4C]/10"
