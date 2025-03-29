@@ -1,7 +1,7 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -10,6 +10,7 @@ const Index = () => {
   useEffect(() => {
     // Only redirect after auth check is complete
     if (!isLoading) {
+      console.log("Index page - Auth state:", { isAuthenticated, isLoading });
       if (isAuthenticated) {
         navigate("/dashboard");
       } else {

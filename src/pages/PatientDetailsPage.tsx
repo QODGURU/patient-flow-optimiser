@@ -1,17 +1,27 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import StatusBadge from "@/components/StatusBadge";
-import { patients, followUps } from "@/data/mockData";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useSupabaseQuery, useMutateSupabase } from "@/hooks/useSupabase";
+import { Patient, FollowUp, Profile } from "@/types/supabase";
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -19,386 +29,408 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
 import {
-  ArrowLeft,
-  User,
-  Calendar,
-  Clock,
-  Phone,
-  MessageSquare,
-  FileText,
-  Edit,
-} from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { FollowUpTable } from "@/components/FollowUpTable";
 
 const PatientDetailsPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  
-  const [patient, setPatient] = useState<any>(null);
-  const [patientFollowUps, setPatientFollowUps] = useState<any[]>([]);
-  const [newFollowUp, setNewFollowUp] = useState({
-    type: "call",
-    response: "",
-    notes: "",
+  const { t } = useLanguage();
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [nextInteraction, setNextInteraction] = useState<Date | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const { data: patient, loading: patientLoading } = useSupabaseQuery<Patient>(
+    "patients",
+    {
+      filters: { id: patientId },
+      enabled: !!patientId,
+    }
+  );
+
+  const { data: doctors } = useSupabaseQuery<Profile>("profiles", {
+    filters: { role: "doctor" },
   });
-  const [loading, setLoading] = useState(true);
-  const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState("");
+
+  const { update, remove, loading: mutationLoading } = useMutateSupabase();
 
   useEffect(() => {
-    // In a real app, we'd fetch from an API
-    const foundPatient = patients.find((p) => p.id === id);
-    const patientFollowUps = followUps.filter((f) => f.patientId === id);
-    
-    setPatient(foundPatient || null);
-    setPatientFollowUps(patientFollowUps);
-    setNewStatus(foundPatient?.status || "");
-    setLoading(false);
-  }, [id]);
+    if (patient && patient.length > 0) {
+      setName(patient[0].name);
+      setPhone(patient[0].phone);
+      setEmail(patient[0].email || "");
+      setNotes(patient[0].notes || "");
+      setNextInteraction(patient[0].next_interaction ? new Date(patient[0].next_interaction) : undefined);
+    }
+  }, [patient]);
 
-  const handleStatusChange = (value: string) => {
-    setNewStatus(value);
+  const handleEditClick = () => {
+    setIsEditing(true);
   };
 
-  const updatePatientStatus = () => {
-    // In a real app, we'd make an API call
-    setPatient((prev: any) => ({ ...prev, status: newStatus }));
-    toast.success("Patient status updated successfully");
-    setStatusUpdateOpen(false);
+  const handleCancelClick = () => {
+    setIsEditing(false);
+    if (patient && patient.length > 0) {
+      setName(patient[0].name);
+      setPhone(patient[0].phone);
+      setEmail(patient[0].email || "");
+      setNotes(patient[0].notes || "");
+      setNextInteraction(patient[0].next_interaction ? new Date(patient[0].next_interaction) : undefined);
+    }
   };
 
-  const handleFollowUpChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setNewFollowUp((prev) => ({ ...prev, [name]: value }));
+  const handleSaveClick = async () => {
+    if (!patientId) return;
+
+    try {
+      await update("patients", patientId, {
+        name,
+        phone,
+        email,
+        notes,
+        next_interaction: nextInteraction?.toISOString() || null,
+        last_modified: new Date().toISOString(),
+        last_modified_by: profile?.id,
+      });
+      toast.success("Patient details updated successfully");
+      setIsEditing(false);
+    } catch (error) {
+      // Error is handled in the mutation hook
+    }
   };
 
-  const handleFollowUpTypeChange = (value: string) => {
-    setNewFollowUp((prev) => ({ ...prev, type: value }));
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
   };
 
-  const handleFollowUpResponseChange = (value: string) => {
-    setNewFollowUp((prev) => ({ ...prev, response: value }));
+  const confirmDelete = async () => {
+    if (!patientId) return;
+
+    try {
+      await remove("patients", patientId);
+      toast.success("Patient deleted successfully");
+      navigate("/patients");
+    } catch (error) {
+      // Error is handled in the mutation hook
+    } finally {
+      setDeleteDialogOpen(false);
+    }
   };
 
-  const addFollowUp = () => {
-    // In a real app, we'd make an API call
-    const newFollowUpData = {
-      id: Date.now().toString(),
-      patientId: id!,
-      type: newFollowUp.type,
-      date: new Date().toISOString().split("T")[0],
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      response: newFollowUp.response || null,
-      notes: newFollowUp.notes,
-    };
-    
-    setPatientFollowUps((prev) => [newFollowUpData, ...prev]);
-    setNewFollowUp({
-      type: "call",
-      response: "",
-      notes: "",
-    });
-    
-    toast.success("Follow-up added successfully");
-  };
-
-  if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  if (patientLoading) {
+    return <div>Loading patient details...</div>;
   }
 
-  if (!patient) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Patient Not Found</h2>
-        <p className="text-gray-600 mb-6">The patient you're looking for does not exist.</p>
-        <Button onClick={() => navigate("/patients")}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
-        </Button>
-      </div>
-    );
+  if (!patient || patient.length === 0) {
+    return <div>Patient not found</div>;
   }
+
+  const {
+    age,
+    gender,
+    treatment_category,
+    treatment_type,
+    price,
+    follow_up_required,
+    status,
+    preferred_time,
+    preferred_channel,
+    availability_preferences,
+    script,
+    created_at,
+    last_interaction,
+    last_interaction_outcome,
+    call_attempts,
+    sms_attempts,
+    sms_transcript,
+    call_transcript,
+    interaction_rating,
+    patient_feedback,
+  } = patient[0];
 
   return (
-    <div>
-      <div className="flex items-center mb-6">
-        <Button
-          variant="outline"
-          size="sm"
-          className="mr-4"
-          onClick={() => navigate("/patients")}
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+    <div className="animate-fade-in">
+      <div className="mb-6">
+        <Button variant="ghost" onClick={() => navigate("/patients")}>
+          ← Back to Patients
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Patient Details</h1>
       </div>
 
-      {/* Patient Summary Card */}
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-start justify-between">
-          <div>
-            <CardTitle className="text-xl">{patient.name}</CardTitle>
-            <CardDescription>
-              Patient ID: {patient.id} • Created: {new Date(patient.createdAt).toLocaleDateString()}
-            </CardDescription>
-          </div>
-          <div className="flex gap-2">
-            <StatusBadge status={patient.status} className="h-fit" />
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-fit"
-              onClick={() => setStatusUpdateOpen(!statusUpdateOpen)}
-            >
-              <Edit className="h-3 w-3 mr-1" /> Update Status
-            </Button>
-          </div>
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>{name}</CardTitle>
+          <CardDescription>
+            {isEditing ? "Edit Patient Details" : "Patient Details"}
+          </CardDescription>
         </CardHeader>
-        
-        {statusUpdateOpen && (
-          <div className="px-6 pb-3 flex items-center gap-2">
-            <Select
-              value={newStatus}
-              onValueChange={handleStatusChange}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="contacted">Contacted</SelectItem>
-                <SelectItem value="interested">Interested</SelectItem>
-                <SelectItem value="booked">Booked</SelectItem>
-                <SelectItem value="cold">Cold</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button size="sm" onClick={updatePatientStatus}>
-              Save
-            </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => setStatusUpdateOpen(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
-        
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <User className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-500 mr-2">Age:</span>
-                <span className="font-medium">{patient.age} years</span>
-              </div>
-              <div className="flex items-center">
-                <User className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-500 mr-2">Gender:</span>
-                <span className="font-medium capitalize">{patient.gender}</span>
-              </div>
-              <div className="flex items-center">
-                <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-500 mr-2">Phone:</span>
-                <span className="font-medium">{patient.phone}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <FileText className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-500 mr-2">Treatment:</span>
-                <span className="font-medium">{patient.treatment}</span>
-              </div>
-              <div className="flex items-center">
-                <FileText className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-500 mr-2">Price:</span>
-                <span className="font-medium">{patient.price.toLocaleString()} AED</span>
-              </div>
-              <div className="flex items-center">
-                <FileText className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-500 mr-2">Clinic:</span>
-                <span className="font-medium">{patient.clinicName}</span>
-              </div>
-            </div>
-          </div>
-          
-          {patient.notes && (
-            <div className="mt-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Notes:</h3>
-              <div className="p-3 bg-gray-50 rounded-md text-sm">
-                {patient.notes}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Follow-ups and Communication Tabs */}
-      <Tabs defaultValue="followups" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="followups">Follow-ups</TabsTrigger>
-          <TabsTrigger value="addnew">Add New Follow-up</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="followups" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Communication History</CardTitle>
-              <CardDescription>
-                All follow-up attempts and responses
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {patientFollowUps.length > 0 ? (
-                <div className="space-y-4">
-                  {patientFollowUps.map((followUp) => (
-                    <div
-                      key={followUp.id}
-                      className="border rounded-lg p-4 bg-gray-50"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center">
-                          {followUp.type === "call" ? (
-                            <Phone className="h-4 w-4 text-yellow-700 mr-2" />
-                          ) : (
-                            <MessageSquare className="h-4 w-4 text-purple-700 mr-2" />
-                          )}
-                          <span className="font-medium capitalize">
-                            {followUp.type}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {followUp.date}
-                          <Clock className="h-3 w-3 ml-2 mr-1" />
-                          {followUp.time}
-                        </div>
-                      </div>
-                      
-                      {followUp.response && (
-                        <div className="mb-3">
-                          <span className="text-sm text-gray-500 mr-2">Response:</span>
-                          <span
-                            className={`text-xs px-2 py-1 rounded-full ${
-                              followUp.response === "yes"
-                                ? "bg-green-100 text-green-800"
-                                : followUp.response === "no"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-blue-100 text-blue-800"
-                            }`}
-                          >
-                            {followUp.response === "call_again"
-                              ? "Call Again"
-                              : followUp.response.charAt(0).toUpperCase() +
-                                followUp.response.slice(1)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {followUp.notes && (
-                        <div className="mt-2">
-                          <span className="text-sm text-gray-500">Notes:</span>
-                          <p className="text-sm mt-1">{followUp.notes}</p>
-                        </div>
-                      )}
-                      
-                      {followUp.transcript && (
-                        <div className="mt-3 pt-3 border-t">
-                          <span className="text-sm text-gray-500">Transcript:</span>
-                          <p className="text-sm mt-1 text-gray-700">
-                            {followUp.transcript}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No follow-ups recorded yet</p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Add a new follow-up to start tracking communication
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="addnew">
-          <Card>
-            <CardHeader>
-              <CardTitle>Record New Follow-up</CardTitle>
-              <CardDescription>
-                Add details about your communication with this patient
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <CardContent className="space-y-4">
+          {isEditing ? (
+            <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="followupType">Communication Type</Label>
-                  <Select
-                    value={newFollowUp.type}
-                    onValueChange={handleFollowUpTypeChange}
-                  >
-                    <SelectTrigger id="followupType">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="call">Phone Call</SelectItem>
-                      <SelectItem value="message">Message</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    type="text"
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="followupResponse">Response</Label>
-                  <Select
-                    value={newFollowUp.response}
-                    onValueChange={handleFollowUpResponseChange}
-                  >
-                    <SelectTrigger id="followupResponse">
-                      <SelectValue placeholder="Select response" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes (Positive)</SelectItem>
-                      <SelectItem value="no">No (Negative)</SelectItem>
-                      <SelectItem value="maybe">Maybe (Unsure)</SelectItem>
-                      <SelectItem value="call_again">Call Again Later</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    type="text"
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
                 </div>
               </div>
-              
-              <div className="space-y-2">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div>
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
-                  name="notes"
-                  value={newFollowUp.notes}
-                  onChange={handleFollowUpChange}
-                  placeholder="Enter details about the communication"
-                  rows={4}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
-              
-              <div className="flex justify-end">
-                <Button
-                  onClick={addFollowUp}
-                  className="bg-medical-teal hover:bg-teal-600"
-                >
-                  Save Follow-up
-                </Button>
+
+              <div>
+                <Label>Next Interaction</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !nextInteraction && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {nextInteraction ? (
+                        format(nextInteraction, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center">
+                    <Calendar
+                      mode="single"
+                      selected={nextInteraction}
+                      onSelect={setNextInteraction}
+                      disabled={(date) =>
+                        date < new Date()
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Name</Label>
+                  <p className="font-medium">{name}</p>
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <p>{phone}</p>
+                </div>
+              </div>
+              <div>
+                <Label>Email</Label>
+                <p>{email || "N/A"}</p>
+              </div>
+              <div>
+                <Label>Notes</Label>
+                <p>{notes || "N/A"}</p>
+              </div>
+              <div>
+                <Label>Next Interaction</Label>
+                <p>{nextInteraction ? new Date(nextInteraction).toLocaleString() : "Not scheduled"}</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Age</Label>
+                  <p>{age || "N/A"}</p>
+                </div>
+                <div>
+                  <Label>Gender</Label>
+                  <p>{gender || "N/A"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Treatment Category</Label>
+                  <p>{treatment_category || "N/A"}</p>
+                </div>
+                <div>
+                  <Label>Treatment Type</Label>
+                  <p>{treatment_type || "N/A"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Price</Label>
+                  <p>{price ? `${price.toLocaleString()} AED` : "N/A"}</p>
+                </div>
+                <div>
+                  <Label>Follow-Up Required</Label>
+                  <p>{follow_up_required ? "Yes" : "No"}</p>
+                </div>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <p>{status || "N/A"}</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Preferred Time</Label>
+                  <p>{preferred_time || "N/A"}</p>
+                </div>
+                <div>
+                  <Label>Preferred Channel</Label>
+                  <p>{preferred_channel || "N/A"}</p>
+                </div>
+              </div>
+              <div>
+                <Label>Availability Preferences</Label>
+                <p>{availability_preferences || "N/A"}</p>
+              </div>
+              <div>
+                <Label>Script</Label>
+                <p>{script || "N/A"}</p>
+              </div>
+              <div>
+                <Label>Created At</Label>
+                <p>{created_at ? new Date(created_at).toLocaleString() : "N/A"}</p>
+              </div>
+              <div>
+                <Label>Last Interaction</Label>
+                <p>{last_interaction ? new Date(last_interaction).toLocaleString() : "N/A"}</p>
+              </div>
+              <div>
+                <Label>Last Interaction Outcome</Label>
+                <p>{last_interaction_outcome || "N/A"}</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Call Attempts</Label>
+                  <p>{call_attempts || "0"}</p>
+                </div>
+                <div>
+                  <Label>SMS Attempts</Label>
+                  <p>{sms_attempts || "0"}</p>
+                </div>
+              </div>
+              <div>
+                <Label>SMS Transcript</Label>
+                <p>{sms_transcript || "N/A"}</p>
+              </div>
+              <div>
+                <Label>Call Transcript</Label>
+                <p>{call_transcript || "N/A"}</p>
+              </div>
+              <div>
+                <Label>Interaction Rating</Label>
+                <p>{interaction_rating || "N/A"}</p>
+              </div>
+              <div>
+                <Label>Patient Feedback</Label>
+                <p>{patient_feedback || "N/A"}</p>
+              </div>
+            </>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex justify-between">
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={handleCancelClick}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-medical-teal hover:bg-teal-600"
+                onClick={handleSaveClick}
+                disabled={mutationLoading}
+              >
+                {mutationLoading ? "Saving..." : "Save"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={handleEditClick}>
+                Edit Details
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteClick}
+                disabled={mutationLoading}
+                className="bg-[#FF3B3B] hover:bg-[#FF3B3B]/90"
+              >
+                Delete Patient
+              </Button>
+            </>
+          )}
+        </CardFooter>
+      </Card>
+
+      <FollowUpTable patientId={patientId} />
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-[#101B4C]">Delete Patient</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this patient? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={mutationLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={mutationLoading}
+              className="bg-[#FF3B3B] hover:bg-[#FF3B3B]/90"
+            >
+              {mutationLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

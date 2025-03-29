@@ -1,293 +1,721 @@
+import { useMemo } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Users, PhoneCall, MessageSquare, Star, ThumbsUp, AlertTriangle, Calendar } from "lucide-react";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { Patient, FollowUp } from "@/types/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  AreaChart,
+  Area
+} from "recharts";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-
-interface DashboardStats {
-  totalPatients: number;
-  pendingPatients: number;
-  contactedPatients: number;
-  interestedPatients: number;
-  notInterestedPatients: number;
-  coldLeads: number;
-  totalFollowUps: number;
-  pendingFollowUps: number;
-}
+// Premium color palette based on the image
+const COLORS = [
+  "#101B4C", // Dark Blue
+  "#00FFC8", // Teal
+  "#2B2E33", // Dark Gray
+  "#FFC107", // Gold
+  "#FF3B3B", // Red
+  "#8066DC", // Purple
+  "#01C5C4", // Cyan
+];
 
 const DashboardPage = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalPatients: 0,
-    pendingPatients: 0,
-    contactedPatients: 0,
-    interestedPatients: 0,
-    notInterestedPatients: 0,
-    coldLeads: 0,
-    totalFollowUps: 0,
-    pendingFollowUps: 0,
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
+
+  // Fetch patients data
+  const { data: patients, loading: patientsLoading } = useSupabaseQuery<Patient>("patients", {
+    orderBy: { column: "created_at", ascending: false },
   });
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#EC7063'];
+  // Fetch follow-ups data
+  const { data: followUps, loading: followUpsLoading } = useSupabaseQuery<FollowUp>("follow_ups", {
+    orderBy: { column: "created_at", ascending: false },
+  });
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setIsLoading(true);
-      try {
-        // Modified queries to fix type issues
-        let totalPatients = 0;
-        let pendingPatients = 0;
-        let contactedPatients = 0;
-        let interestedPatients = 0;
-        let notInterestedPatients = 0;
-        let coldLeads = 0;
-        let totalFollowUps = 0;
-        let pendingFollowUps = 0;
+  // Filter patients based on role
+  const filteredPatients = useMemo(() => {
+    return isAdmin
+      ? patients
+      : patients.filter((patient) => patient.doctor_id === profile?.id);
+  }, [isAdmin, patients, profile?.id]);
 
-        // Get total patients
-        let query = supabase.from('patients').select('*', { count: 'exact' });
-        if (user?.role !== "admin") {
-          query = query.eq('doctor_id', user?.id);
-        }
-        const { count } = await query;
-        totalPatients = count || 0;
-        
-        // Get pending patients
-        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Pending');
-        if (user?.role !== "admin") {
-          query = query.eq('doctor_id', user?.id);
-        }
-        const pendingResult = await query;
-        pendingPatients = pendingResult.count || 0;
-        
-        // Get contacted patients
-        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Contacted');
-        if (user?.role !== "admin") {
-          query = query.eq('doctor_id', user?.id);
-        }
-        const contactedResult = await query;
-        contactedPatients = contactedResult.count || 0;
-        
-        // Get interested patients
-        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Interested');
-        if (user?.role !== "admin") {
-          query = query.eq('doctor_id', user?.id);
-        }
-        const interestedResult = await query;
-        interestedPatients = interestedResult.count || 0;
-        
-        // Get not interested patients
-        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Not Interested');
-        if (user?.role !== "admin") {
-          query = query.eq('doctor_id', user?.id);
-        }
-        const notInterestedResult = await query;
-        notInterestedPatients = notInterestedResult.count || 0;
-        
-        // Get cold leads
-        query = supabase.from('patients').select('*', { count: 'exact' }).eq('status', 'Cold');
-        if (user?.role !== "admin") {
-          query = query.eq('doctor_id', user?.id);
-        }
-        const coldResult = await query;
-        coldLeads = coldResult.count || 0;
-        
-        // Get follow-ups stats
-        let followUpsQuery = supabase.from('follow_ups').select('*', { count: 'exact' });
-        if (user?.role !== "admin") {
-          followUpsQuery = followUpsQuery.eq('created_by', user?.id);
-        }
-        const followUpsResult = await followUpsQuery;
-        totalFollowUps = followUpsResult.count || 0;
-        
-        // Get pending follow-ups (using next_interaction)
-        const now = new Date().toISOString();
-        query = supabase.from('patients')
-          .select('*', { count: 'exact' })
-          .not('next_interaction', 'is', null)
-          .lt('next_interaction', now);
-          
-        if (user?.role !== "admin") {
-          query = query.eq('doctor_id', user?.id);
-        }
-        const pendingFollowUpsResult = await query;
-        pendingFollowUps = pendingFollowUpsResult.count || 0;
-        
-        setStats({
-          totalPatients,
-          pendingPatients,
-          contactedPatients,
-          interestedPatients,
-          notInterestedPatients,
-          coldLeads,
-          totalFollowUps,
-          pendingFollowUps,
-        });
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-        toast({
-          variant: "destructive",
-          title: "Failed to load dashboard data",
-          description: "Please try refreshing the page.",
-        });
-      } finally {
-        setIsLoading(false);
+  // Count patients by status
+  const patientStatusCounts = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    const statusGroups = filteredPatients.reduce((acc, patient) => {
+      acc[patient.status] = (acc[patient.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(statusGroups).map(([status, count]) => ({
+      status,
+      count,
+    }));
+  }, [filteredPatients, patientsLoading]);
+
+  // Count follow-ups by type
+  const followUpCounts = useMemo(() => {
+    if (followUpsLoading) return { call: 0, message: 0, total: 0, pending: 0, notInterested: 0, interested: 0 };
+    
+    const pending = filteredPatients.filter(p => 
+      p.status === 'Pending' || p.status === 'Contacted'
+    ).length;
+    
+    const interested = filteredPatients.filter(p => p.status === 'Interested').length;
+    const notInterested = filteredPatients.filter(p => p.status === 'Not Interested').length;
+    
+    const stats = followUps.reduce((acc, followUp) => {
+      if (followUp.type.toLowerCase().includes('call')) {
+        acc.call += 1;
+      } else if (followUp.type.toLowerCase().includes('message') || followUp.type.toLowerCase().includes('sms')) {
+        acc.message += 1;
       }
-    };
+      acc.total += 1;
+      return acc;
+    }, { call: 0, message: 0, total: 0, pending, interested, notInterested });
+    
+    return stats;
+  }, [followUps, followUpsLoading, filteredPatients]);
 
-    fetchStats();
-  }, [user]);
+  // Create data for follow-up trend chart
+  const followUpTrendData = useMemo(() => {
+    if (followUpsLoading) return [];
+    
+    // Group follow-ups by date
+    const grouped = followUps.reduce((acc, followUp) => {
+      const date = followUp.date;
+      if (!acc[date]) {
+        acc[date] = { date, calls: 0, messages: 0 };
+      }
+      
+      if (followUp.type.toLowerCase().includes('call')) {
+        acc[date].calls += 1;
+      } else if (followUp.type.toLowerCase().includes('message') || followUp.type.toLowerCase().includes('sms')) {
+        acc[date].messages += 1;
+      }
+      
+      return acc;
+    }, {} as Record<string, { date: string; calls: number; messages: number }>);
+    
+    // Convert to array and sort by date
+    return Object.values(grouped)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(-6); // Last 6 dates with data
+  }, [followUps, followUpsLoading]);
 
-  const patientStatusData = [
-    { name: 'Pending', value: stats.pendingPatients },
-    { name: 'Contacted', value: stats.contactedPatients },
-    { name: 'Interested', value: stats.interestedPatients },
-    { name: 'Not Interested', value: stats.notInterestedPatients },
-    { name: 'Cold', value: stats.coldLeads },
-  ];
+  // Interaction outcome distribution
+  const interactionOutcomes = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    const outcomes = filteredPatients.reduce((acc, patient) => {
+      if (patient.last_interaction_outcome) {
+        acc[patient.last_interaction_outcome] = (acc[patient.last_interaction_outcome] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(outcomes).map(([outcome, count]) => ({
+      outcome,
+      count,
+    }));
+  }, [filteredPatients, patientsLoading]);
 
-  const followUpData = [
-    { name: 'Total Follow-ups', value: stats.totalFollowUps },
-    { name: 'Pending Follow-ups', value: stats.pendingFollowUps },
-  ];
+  // Treatment categories distribution
+  const treatmentCategories = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    const categories = filteredPatients.reduce((acc, patient) => {
+      if (patient.treatment_category) {
+        acc[patient.treatment_category] = (acc[patient.treatment_category] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(categories).map(([category, count]) => ({
+      category,
+      count,
+    }));
+  }, [filteredPatients, patientsLoading]);
+
+  // Channel preference distribution
+  const channelPreferences = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    const preferences = filteredPatients.reduce((acc, patient) => {
+      const channel = patient.preferred_channel || 'Not Specified';
+      acc[channel] = (acc[channel] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(preferences).map(([channel, count]) => ({
+      channel,
+      count,
+    }));
+  }, [filteredPatients, patientsLoading]);
+
+  // Time preference distribution
+  const timePreferences = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    const preferences = filteredPatients.reduce((acc, patient) => {
+      const time = patient.preferred_time || 'Not Specified';
+      acc[time] = (acc[time] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(preferences).map(([time, count]) => ({
+      time,
+      count,
+    }));
+  }, [filteredPatients, patientsLoading]);
+
+  // Conversion rate over time (interested / total patients per week)
+  const conversionTrend = useMemo(() => {
+    if (patientsLoading) return [];
+    
+    // Group by week
+    const weeks: Record<string, { week: string; total: number; interested: number }> = {};
+    
+    filteredPatients.forEach(patient => {
+      if (!patient.created_at) return;
+      
+      const date = new Date(patient.created_at);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      const weekKey = weekStart.toISOString().split('T')[0];
+      
+      if (!weeks[weekKey]) {
+        weeks[weekKey] = { week: weekKey, total: 0, interested: 0 };
+      }
+      
+      weeks[weekKey].total += 1;
+      if (patient.status === 'Interested') {
+        weeks[weekKey].interested += 1;
+      }
+    });
+    
+    return Object.values(weeks)
+      .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime())
+      .slice(-8)
+      .map(week => ({
+        ...week,
+        rate: week.total > 0 ? (week.interested / week.total) * 100 : 0
+      }));
+  }, [filteredPatients, patientsLoading]);
+
+  // Get recent follow-ups
+  const recentFollowUps = useMemo(() => {
+    if (followUpsLoading || patientsLoading) return [];
+    
+    return followUps
+      .slice(0, 5)
+      .map(followUp => {
+        const patient = filteredPatients.find(p => p.id === followUp.patient_id);
+        return { ...followUp, patientName: patient?.name || 'Unknown' };
+      });
+  }, [followUps, filteredPatients, followUpsLoading, patientsLoading]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      <p className="text-muted-foreground">
-        Welcome {user?.name}! Here's an overview of your patient follow-up statistics.
-      </p>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="w-12 h-12 border-t-4 border-medical-teal border-solid rounded-full animate-spin"></div>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-[#101B4C]">Dashboard</h1>
+        <div className="text-sm text-[#2B2E33]">
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
         </div>
-      ) : (
-        <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalPatients}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Interested</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.interestedPatients}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Not Interested</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.notInterestedPatients}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Cold Leads</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.coldLeads}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Follow-ups</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalFollowUps}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Pending Follow-ups</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.pendingFollowUps}</div>
-              </CardContent>
-            </Card>
-          </div>
+      </div>
 
-          <Tabs defaultValue="patient-status">
-            <TabsList>
-              <TabsTrigger value="patient-status">Patient Status</TabsTrigger>
-              <TabsTrigger value="follow-ups">Follow-up Analytics</TabsTrigger>
-            </TabsList>
-            <TabsContent value="patient-status">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Patient Status Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={patientStatusData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {patientStatusData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => [`${value} patients`, 'Count']} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="follow-ups">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Follow-up Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={followUpData}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardContent className="p-6 flex items-center">
+            <div className="bg-[#101B4C]/10 p-3 rounded-full mr-4">
+              <Users className="h-6 w-6 text-[#101B4C]" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[#2B2E33]">Total Patients</p>
+              {patientsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <h3 className="text-2xl font-bold text-[#101B4C]">{filteredPatients.length}</h3>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardContent className="p-6 flex items-center">
+            <div className="bg-[#00FFC8]/10 p-3 rounded-full mr-4">
+              <Star className="h-6 w-6 text-[#00FFC8]" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[#2B2E33]">
+                Interested
+              </p>
+              {patientsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <h3 className="text-2xl font-bold text-[#101B4C]">
+                  {followUpCounts.interested}
+                </h3>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardContent className="p-6 flex items-center">
+            <div className="bg-[#FF3B3B]/10 p-3 rounded-full mr-4">
+              <AlertTriangle className="h-6 w-6 text-[#FF3B3B]" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[#2B2E33]">Not Interested</p>
+              {patientsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <h3 className="text-2xl font-bold text-[#101B4C]">{followUpCounts.notInterested}</h3>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardContent className="p-6 flex items-center">
+            <div className="bg-[#FFC107]/10 p-3 rounded-full mr-4">
+              <PhoneCall className="h-6 w-6 text-[#FFC107]" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[#2B2E33]">Total Follow-ups</p>
+              {followUpsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <h3 className="text-2xl font-bold text-[#101B4C]">{followUpCounts.total}</h3>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardContent className="p-6 flex items-center">
+            <div className="bg-[#8066DC]/10 p-3 rounded-full mr-4">
+              <Calendar className="h-6 w-6 text-[#8066DC]" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[#2B2E33]">
+                Pending Follow-ups
+              </p>
+              {patientsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <h3 className="text-2xl font-bold text-[#101B4C]">{followUpCounts.pending}</h3>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Patient Status Chart */}
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Patient Status</CardTitle>
+            <CardDescription>Distribution by current status</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            {patientsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : patientStatusCounts.length > 0 ? (
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={patientStatusCounts}
+                      dataKey="count"
+                      nameKey="status"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ status, percent }) => 
+                        `${status}: ${(percent * 100).toFixed(0)}%`
+                      }
+                    >
+                      {patientStatusCounts.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} patients`, "Count"]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No status data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Conversion Rate Trend */}
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Conversion Rate</CardTitle>
+            <CardDescription>Weekly interested patients vs. total</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {patientsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : conversionTrend.length > 0 ? (
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={conversionTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="week" 
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return `${date.getMonth()+1}/${date.getDate()}`;
+                      }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }} 
+                      domain={[0, 100]}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip 
+                      formatter={(value) => {
+                        // Check if value is a number before calling toFixed
+                        return [
+                          typeof value === 'number' ? `${value.toFixed(1)}%` : `${value}%`, 
+                          "Conversion Rate"
+                        ]
+                      }}
+                      contentStyle={{ 
+                        backgroundColor: '#FDFDFD', 
+                        borderColor: '#101B4C20',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="rate" 
+                      name="Conversion Rate" 
+                      stroke="#00FFC8" 
+                      strokeWidth={3}
+                      dot={{ stroke: '#101B4C', strokeWidth: 2, r: 4, fill: '#00FFC8' }}
+                      activeDot={{ r: 6, stroke: '#101B4C', strokeWidth: 2, fill: '#00FFC8' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No conversion trend data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Follow-up Trend Chart */}
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Follow-up Trends</CardTitle>
+            <CardDescription>Communication activity over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {followUpsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : followUpTrendData.length > 0 ? (
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={followUpTrendData}>
+                    <defs>
+                      <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#101B4C" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#101B4C" stopOpacity={0.1}/>
+                      </linearGradient>
+                      <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00FFC8" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#00FFC8" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#FDFDFD', 
+                        borderColor: '#101B4C20',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }} 
+                    />
+                    <Legend verticalAlign="top" height={36} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="calls" 
+                      stroke="#101B4C" 
+                      fillOpacity={1} 
+                      fill="url(#colorCalls)" 
+                      strokeWidth={2}
+                      name="Phone Calls"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="messages" 
+                      stroke="#00FFC8" 
+                      fillOpacity={1} 
+                      fill="url(#colorMessages)" 
+                      strokeWidth={2}
+                      name="Messages"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No follow-up trend data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Preferred Channel Chart */}
+        <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Communication Preferences</CardTitle>
+            <CardDescription>Patients by preferred contact method</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {patientsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : channelPreferences.length > 0 ? (
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={channelPreferences}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="channel" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#FDFDFD', 
+                        borderColor: '#101B4C20',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="count" 
+                      name="Patients" 
+                      fill="#8066DC"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No channel preference data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        {/* Interaction Outcomes */}
+        <Card className="lg:col-span-1 hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Interaction Outcomes</CardTitle>
+            <CardDescription>Patient responses to follow-ups</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {patientsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : interactionOutcomes.length > 0 ? (
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={interactionOutcomes} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" tick={{ fontSize: 12 }} />
+                    <YAxis dataKey="outcome" type="category" tick={{ fontSize: 12 }} width={100} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#FDFDFD', 
+                        borderColor: '#101B4C20',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }} 
+                    />
+                    <Bar 
+                      dataKey="count" 
+                      name="Responses" 
+                      radius={[0, 4, 4, 0]}
+                    >
+                      {interactionOutcomes.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No interaction outcome data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Treatment Categories */}
+        <Card className="lg:col-span-1 hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Treatment Distribution</CardTitle>
+            <CardDescription>Patient counts by treatment category</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {patientsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : treatmentCategories.length > 0 ? (
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={treatmentCategories}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="category" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#FDFDFD', 
+                        borderColor: '#101B4C20',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }} 
+                    />
+                    <Bar 
+                      dataKey="count" 
+                      name="Patients" 
+                      fill="#00FFC8"
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {treatmentCategories.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No treatment category data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Follow-ups */}
+        <Card className="lg:col-span-1 hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#101B4C]">Recent Follow-ups</CardTitle>
+            <CardDescription>Latest communications with patients</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {followUpsLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : recentFollowUps.length > 0 ? (
+              <div className="space-y-4">
+                {recentFollowUps.map((followUp) => (
+                  <div
+                    key={followUp.id}
+                    className="flex items-start p-3 border rounded-lg bg-gray-50 hover:shadow-md transition-shadow duration-200"
+                  >
+                    <div
+                      className={`p-2 rounded-full mr-3 ${
+                        followUp.type.toLowerCase().includes('call')
+                          ? "bg-[#FFC107]/10"
+                          : "bg-[#00FFC8]/10"
+                      }`}
+                    >
+                      {followUp.type.toLowerCase().includes('call') ? (
+                        <PhoneCall
+                          className="h-4 w-4 text-[#FFC107]"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <MessageSquare
+                          className="h-4 w-4 text-[#00FFC8]"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#101B4C] truncate">
+                        {followUp.patientName}
+                      </p>
+                      <p className="text-xs text-[#2B2E33] mt-1">
+                        {followUp.date} at {followUp.time}
+                      </p>
+                      {followUp.notes && (
+                        <p className="text-xs text-[#2B2E33] mt-1 truncate">
+                          {followUp.notes}
+                        </p>
+                      )}
+                    </div>
+                    {followUp.response && (
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          followUp.response === "Yes"
+                            ? "bg-green-100 text-green-800"
+                            : followUp.response === "No"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
                       >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="value" name="Count" fill="#8884d8" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                        {followUp.response === "call_again"
+                          ? "Call Again"
+                          : followUp.response}
+                      </span>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-10 text-[#2B2E33]">
+                No recent follow-ups available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

@@ -12,20 +12,6 @@ export interface User {
 
 export type PatientStatus = "pending" | "contacted" | "interested" | "booked" | "cold" | "opt-out";
 
-// Helper type for database-compatible status values
-// This MUST exactly match the enum values in the database
-export type DatabasePatientStatus = "Interested" | "Not Interested" | "Pending" | "Contacted" | "Booked" | "Cold";
-
-// Map to convert from frontend PatientStatus to database status
-export const patientStatusToDatabaseStatus: Record<PatientStatus, DatabasePatientStatus> = {
-  "pending": "Pending",
-  "contacted": "Contacted",
-  "interested": "Interested",
-  "booked": "Booked",
-  "cold": "Cold",
-  "opt-out": "Cold" // Map opt-out to Cold in the database since it doesn't have its own status
-};
-
 export type FollowUpType = "call" | "message";
 export type FollowUpResponse = "yes" | "no" | "maybe" | "call_again" | null;
 

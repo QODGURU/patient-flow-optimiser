@@ -1,7 +1,6 @@
-
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { patients } from "@/data/mockData";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,41 +20,73 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, Filter, Snowflake, Clock, BarChart } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Link } from "react-router-dom";
+import { useSupabaseQuery, useMutateSupabase } from "@/hooks/useSupabase";
+import { Patient } from "@/types/supabase";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ColdLeadsPage = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { t } = useLanguage();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = profile?.role === "admin";
 
   // States for filtering
   const [searchTerm, setSearchTerm] = useState("");
   const [reasonFilter, setReasonFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(0);
+  const ITEMS_PER_PAGE = 20;
 
-  // Get only cold leads
-  const coldLeads = patients.filter(patient => patient.status === "cold" || patient.status === "opt-out");
-  
-  // Filter patients based on role, search term, and reason
-  const filteredPatients = coldLeads
-    .filter((patient) => (isAdmin ? true : patient.doctorId === user?.id))
-    .filter(
-      (patient) =>
-        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.phone.includes(searchTerm)
-    )
-    .filter(
-      (patient) => reasonFilter === "all" || patient.coldReason === reasonFilter
-    );
+  // Data fetching hooks
+  const { data: patients, loading: patientsLoading } = 
+    useSupabaseQuery<Patient>("patients", {
+      orderBy: { column: "created_at", ascending: false },
+      limit: ITEMS_PER_PAGE,
+      page: currentPage,
+      filters: isAdmin ? { status: ['Cold'] } : { doctor_id: profile?.id || "", status: ['Cold'] }
+    });
 
-  // Quick stats
+  const { update } = useMutateSupabase();
+
+  // Filter patients based on search term and reason
+  const filteredPatients = patients.filter(
+    (patient) => {
+      const matchesSearch = 
+        patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        patient.phone?.includes(searchTerm) ||
+        patient.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesReason = 
+        reasonFilter === "all" || 
+        patient.cold_reason === reasonFilter;
+      
+      return matchesSearch && matchesReason;
+    }
+  );
+
+  // Quick stats calculation
+  const coldLeads = patients;
   const countByReason = {
-    "no-response": coldLeads.filter(p => p.coldReason === "no-response").length,
-    "declined": coldLeads.filter(p => p.coldReason === "declined").length,
-    "opt-out": coldLeads.filter(p => p.status === "opt-out").length,
-    "invalid-contact": coldLeads.filter(p => p.coldReason === "invalid-contact").length,
-    "budget-constraints": coldLeads.filter(p => p.coldReason === "budget-constraints").length
+    "no-response": coldLeads.filter(p => p.cold_reason === "no-response").length,
+    "declined": coldLeads.filter(p => p.cold_reason === "declined").length,
+    "opt-out": coldLeads.filter(p => p.cold_reason === "opt-out").length,
+    "invalid-contact": coldLeads.filter(p => p.cold_reason === "invalid-contact").length,
+    "budget-constraints": coldLeads.filter(p => p.cold_reason === "budget-constraints").length
+  };
+
+  const handleReactivatePatient = async (patientId: string) => {
+    try {
+      await update<Patient>("patients", patientId, {
+        status: "Pending",
+        cold_reason: null
+      });
+      
+      toast.success("Patient reactivated successfully");
+    } catch (error) {
+      console.error("Error reactivating patient:", error);
+      toast.error("Failed to reactivate patient");
+    }
   };
 
   return (
@@ -154,9 +185,9 @@ const ColdLeadsPage = () => {
 
       {/* Cold Leads Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[calc(100vh-240px)] overflow-y-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Phone</TableHead>
@@ -169,20 +200,35 @@ const ColdLeadsPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPatients.length > 0 ? (
+              {patientsLoading ? (
+                // Loading skeleton
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={`skeleton-${index}`}>
+                    {Array.from({ length: 8 }).map((_, colIndex) => (
+                      <TableCell key={`skeleton-cell-${colIndex}`}>
+                        <Skeleton className="h-6 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : filteredPatients.length > 0 ? (
                 filteredPatients.map((patient) => (
                   <TableRow key={patient.id} className="hover-scale">
                     <TableCell className="font-medium">{patient.name}</TableCell>
                     <TableCell>{patient.phone}</TableCell>
-                    <TableCell>{patient.treatment}</TableCell>
-                    <TableCell>{patient.price.toLocaleString()}</TableCell>
+                    <TableCell>{patient.treatment_type}</TableCell>
+                    <TableCell>{patient.price ? patient.price.toLocaleString() : "-"}</TableCell>
                     <TableCell>
                       <StatusBadge status={patient.status} />
                     </TableCell>
                     <TableCell>
-                      {patient.coldReason ? patient.coldReason.replace("-", " ") : "-"}
+                      {patient.cold_reason ? patient.cold_reason.replace("-", " ") : "-"}
                     </TableCell>
-                    <TableCell>{patient.lastContactDate || "-"}</TableCell>
+                    <TableCell>
+                      {patient.last_interaction 
+                        ? new Date(patient.last_interaction).toLocaleDateString() 
+                        : "-"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Link to={`/patients/${patient.id}`}>
@@ -190,7 +236,11 @@ const ColdLeadsPage = () => {
                             View
                           </Button>
                         </Link>
-                        <Button variant="secondary" size="sm">
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => handleReactivatePatient(patient.id)}
+                        >
                           Reactivate
                         </Button>
                       </div>

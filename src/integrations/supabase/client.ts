@@ -6,13 +6,70 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://rcwcurpxbynaaxydivdx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjd2N1cnB4YnluYWF4eWRpdmR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxOTM4MzQsImV4cCI6MjA1ODc2OTgzNH0.oc_Hhs-dWDBrYd0ZrMT45AcjN3QUztZy_z311wSMN8Y";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
-
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
+export const supabase = createClient<Database>(
+  SUPABASE_URL, 
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'sb-rcwcurpxbynaaxydivdx-auth-token',
+    },
+    global: {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    // Add realtime subscriptions
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
   }
-});
+);
+
+// Utility function to check if a user is authenticated
+export const isUserAuthenticated = async () => {
+  const { data, error } = await supabase.auth.getSession();
+  return { 
+    isAuthenticated: !!data.session, 
+    session: data.session, 
+    error 
+  };
+};
+
+// Utility function to get current user profile
+export const getCurrentUserProfile = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { profile: null, error: new Error('No active session') };
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+    
+  return { profile: data, error };
+};
+
+// Check the Supabase connection status
+export const checkSupabaseConnection = async () => {
+  try {
+    const { count, error } = await supabase
+      .from('clinics')
+      .select('*', { count: 'exact', head: true });
+    
+    return { 
+      connected: !error, 
+      error: error ? error.message : null 
+    };
+  } catch (error) {
+    console.error('Error checking Supabase connection:', error);
+    return { 
+      connected: false, 
+      error: error.message 
+    };
+  }
+};
