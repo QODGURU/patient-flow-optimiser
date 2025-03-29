@@ -53,7 +53,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     
     try {
       // Transform the data to match the patient table structure
-      const patientData = {
+      const patientData: Patient = {
         name: values.name,
         age: values.age !== undefined && values.age !== null ? Number(values.age) : null,
         gender: values.gender,
@@ -65,7 +65,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         doctor_id: values.doctor_id || profile?.id || null,
         clinic_id: values.clinic_id || profile?.clinic_id || null,
         follow_up_required: values.follow_up_required,
-        status: "Pending" as const,
+        status: "Pending",
         preferred_time: values.preferred_time as "Morning" | "Afternoon" | "Evening" | undefined,
         preferred_channel: values.preferred_channel as "Call" | "SMS" | "Email" | undefined,
         availability_preferences: values.availability_preferences || null,
