@@ -1,12 +1,11 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
-// Define valid table names as a union type instead of a literal type
-type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings' | 'api_configurations';
+// Use string literal type for tables instead of using api_configurations which isn't in the database schema
+type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings';
 
 export function useSupabaseQuery<T>(
   tableName: TableName,

@@ -21,7 +21,7 @@ export type Clinic = {
 }
 
 export type Patient = {
-  id?: string; // Make ID optional since it's auto-generated on insert
+  id?: string; // Optional ID since it's auto-generated on insert
   name: string;
   age?: number | null;
   gender?: string;
@@ -51,7 +51,7 @@ export type Patient = {
   last_modified_by?: string;
   script?: string;
   cold_reason?: string;
-  patient_feedback?: string; // Add this missing field
+  patient_feedback?: string;
   // VoIP fields
   voip_call_id?: string | null;
   voip_call_status?: string | null;
