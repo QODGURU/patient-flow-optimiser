@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [bypassAttempted, setBypassAttempted] = useState(false);
 
   // Initialize auth state
   useEffect(() => {
@@ -34,14 +35,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const adminBypass = localStorage.getItem("admin_bypass");
       if (adminBypass) {
         try {
+          console.log("Found admin bypass in localStorage", adminBypass);
           const mockProfile = JSON.parse(adminBypass) as Profile;
           setProfile(mockProfile);
           setUser({ id: mockProfile.id, email: mockProfile.email } as User);
+          
+          // Create a mock session to maintain consistency
+          const mockSession = {
+            access_token: "fake-token",
+            refresh_token: "fake-refresh-token",
+            expires_in: 3600,
+            expires_at: Date.now() + 3600000,
+            token_type: "bearer",
+            user: { id: mockProfile.id, email: mockProfile.email } as User
+          } as Session;
+          
+          setSession(mockSession);
           setIsLoading(false);
+          console.log("Successfully loaded admin bypass profile:", mockProfile);
           return true;
         } catch (error) {
           console.error("Error parsing admin bypass:", error);
           localStorage.removeItem("admin_bypass");
+          toast.error("Admin bypass data was corrupted and has been reset");
         }
       }
       return false;
@@ -89,6 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         console.error("Error during auth initialization:", error);
+        toast.error("Failed to initialize authentication");
       } finally {
         setIsLoading(false);
       }
@@ -112,6 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         console.error("Error fetching profile:", error);
+        toast.error("Failed to load user profile");
         return;
       }
       
@@ -120,9 +138,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setProfile(data as Profile);
       } else {
         console.log("No profile found for user:", userId);
+        toast.warning("User profile not found");
       }
     } catch (error) {
       console.error("Error in fetchProfile:", error);
+      toast.error("Error loading profile");
     }
   };
 
@@ -164,12 +184,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Check for admin bypass first
       if (localStorage.getItem("admin_bypass")) {
+        console.log("Removing admin bypass");
         localStorage.removeItem("admin_bypass");
         setUser(null);
         setProfile(null);
         setSession(null);
         toast.success("Logged out successfully");
         setIsLoading(false);
+        
+        // Dispatch event to notify other components
+        document.dispatchEvent(new Event("bypass-changed"));
         return;
       }
       
@@ -177,6 +201,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         console.error("Logout error:", error);
+        toast.error("Error logging out: " + error.message);
         throw error;
       }
       
@@ -186,6 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast.success("Logged out successfully");
     } catch (error) {
       console.error("Logout error:", error);
+      toast.error("Failed to log out");
       throw error;
     } finally {
       setIsLoading(false);
@@ -195,7 +221,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // For development only - creates a mock admin session
   const bypassAuth = async () => {
     setIsLoading(true);
+    setBypassAttempted(true);
     try {
+      console.log("Attempting admin bypass");
+      
       // Create a mock admin profile - this is for testing only!
       const mockProfile: Profile = {
         id: "bypass-admin-id",
@@ -204,9 +233,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: "admin",
       };
       
+      // Store in localStorage
       localStorage.setItem("admin_bypass", JSON.stringify(mockProfile));
+      console.log("Saved mock profile to localStorage:", mockProfile);
+      
+      // Update state
       setProfile(mockProfile);
-      // Set minimal user object to make isAuthenticated true
       setUser({ id: "bypass-admin-id", email: "admin@example.com" } as User);
       
       // Create a mock session to simulate being logged in
@@ -221,9 +253,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setSession(mockSession);
       
+      // Notify the UI
       toast.success("Bypassed authentication as Admin!");
+      
+      // Verify localStorage was set correctly
+      const verifyBypass = localStorage.getItem("admin_bypass");
+      console.log("Verification - bypass storage result:", verifyBypass);
+      
+      if (!verifyBypass) {
+        throw new Error("Failed to save bypass data to localStorage");
+      }
+      
+      // Dispatch event to notify other components
+      document.dispatchEvent(new Event("bypass-changed"));
+      
+      return;
     } catch (error) {
       console.error("Bypass auth error:", error);
+      toast.error("Failed to bypass authentication: " + (error instanceof Error ? error.message : "Unknown error"));
+      throw error;
     } finally {
       setIsLoading(false);
     }
