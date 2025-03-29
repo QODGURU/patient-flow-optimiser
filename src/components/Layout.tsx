@@ -17,7 +17,7 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const { user, profile, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -45,7 +45,7 @@ const Layout = ({ children }: LayoutProps) => {
     return <>{children}</>;
   }
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = user.role === "admin";
   const currentPath = location.pathname;
 
   const isLinkActive = (path: string) => {
@@ -110,7 +110,7 @@ const Layout = ({ children }: LayoutProps) => {
               
               <div className="flex items-center space-x-2">
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-700">{profile?.name}</p>
+                  <p className="text-sm font-medium text-gray-700">{user.name}</p>
                   <p className="text-xs text-gray-500">{isAdmin ? "Admin" : "Doctor"}</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleLogout}>

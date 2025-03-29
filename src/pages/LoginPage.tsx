@@ -1,159 +1,102 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { AlertCircle } from "lucide-react";
+import { UserRole } from "@/types";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log("User is authenticated, redirecting to dashboard");
-      navigate("/dashboard");
-    }
-  }, [isAuthenticated, navigate]);
+  const [activeTab, setActiveTab] = useState<UserRole>("doctor");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    
-    if (!email || !password) {
-      setError("Email and password are required");
-      return;
-    }
     
     try {
-      console.log("Attempting login for:", email);
-      await login(email, password);
-      // Navigation is handled by the useEffect above when isAuthenticated changes
-    } catch (error: any) {
-      // More specific error handling
-      const errorMsg = error.message || "Failed to login";
-      if (errorMsg.includes("Invalid login credentials")) {
-        setError("Invalid email or password. Please check your credentials and try again.");
-      } else {
-        setError(errorMsg);
-      }
-      console.error("Login error:", error);
-    }
-  };
-
-  const setDemoCredentials = (type: 'admin' | 'doctor') => {
-    if (type === 'admin') {
-      setEmail("admin@example.com");
-      setPassword("password123");
-    } else {
-      setEmail("doctor@example.com");
-      setPassword("password123");
+      await login(email, password, activeTab);
+      toast.success(`Welcome back!`);
+      navigate("/");
+    } catch (error) {
+      toast.error("Invalid credentials. Please try again.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-medical-light-blue p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#101B4C]">
+          <h1 className="text-3xl font-bold text-medical-navy">
             Patient Flow Optimiser
           </h1>
-          <p className="text-[#2B2E33] mt-2">
+          <p className="text-gray-600 mt-2">
             Login to manage your patient follow-ups
           </p>
         </div>
 
-        <Card className="border-[#101B4C]/10 mb-6">
-          <CardHeader>
-            <CardTitle className="text-[#101B4C]">Login</CardTitle>
-            <CardDescription>
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              {error && (
-                <div className="bg-red-50 p-3 rounded-md flex items-start gap-2 text-red-700 text-sm">
-                  <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span>{error}</span>
+        <Tabs defaultValue="doctor" className="w-full" onValueChange={(value) => setActiveTab(value as UserRole)}>
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="doctor">Doctor</TabsTrigger>
+            <TabsTrigger value="admin">Admin</TabsTrigger>
+          </TabsList>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>{activeTab === "doctor" ? "Doctor Login" : "Admin Login"}</CardTitle>
+              <CardDescription>
+                Enter your credentials to access your account
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={activeTab === "doctor" ? "doctor@example.com" : "admin@example.com"}
+                    required
+                  />
                 </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your-email@example.com"
-                  required
-                  className="border-[#2B2E33]/20 focus-visible:ring-[#00FFC8]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="password"
-                  required
-                  className="border-[#2B2E33]/20 focus-visible:ring-[#00FFC8]"
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3">
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-[#101B4C] to-[#00FFC8] hover:opacity-90"
-                disabled={isLoading}
-              >
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
-
-        <Card className="border-[#101B4C]/10">
-          <CardHeader>
-            <CardTitle className="text-[#101B4C] text-lg">Demo Credentials</CardTitle>
-            <CardDescription>
-              Use these options to quickly login
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="outline" 
-                className="border-[#101B4C] text-[#101B4C] flex justify-between items-center"
-                onClick={() => setDemoCredentials('admin')}
-              >
-                <span className="font-semibold">Admin User</span>
-                <span className="text-xs">admin@example.com</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="border-[#101B4C] text-[#101B4C] flex justify-between items-center"
-                onClick={() => setDemoCredentials('doctor')}
-              >
-                <span className="font-semibold">Doctor User</span>
-                <span className="text-xs">doctor@example.com</span>
-              </Button>
-            </div>
-            <p className="text-xs text-center text-[#2B2E33]/80">
-              Password for both accounts: <span className="font-mono bg-[#F0F0F0] px-1 py-0.5 rounded">password123</span>
-            </p>
-          </CardContent>
-        </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="password123"
+                    required
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-medical-teal hover:bg-teal-600"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Logging in..." : "Login"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </Tabs>
+        
+        <div className="mt-4 text-center text-sm text-gray-600">
+          <p>Demo credentials:</p>
+          <p>Doctor: doctor@example.com / password123</p>
+          <p>Admin: admin@example.com / password123</p>
+        </div>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield } from "lucide-react";
 
 const AdminOnlyPage = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -22,7 +22,7 @@ const AdminOnlyPage = () => {
         </CardHeader>
         <CardContent className="text-center">
           <p className="mb-4">
-            Welcome, <span className="font-bold">{profile?.name}</span>
+            Welcome, <span className="font-bold">{user?.name}</span>
           </p>
           <p className="text-gray-600">
             As an administrator, you have access to all areas of the system including

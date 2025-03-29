@@ -1,4 +1,0 @@
-
-Patient Name,Age,Gender,Phone,Email,Treatment Category,Treatment Type,Price (AED),Follow-Up Required,Status,Clinic Name,Assigned Doctor,Preferred Follow-Up Time,Preferred Channel,Availability Preferences,Notes,Script
-John Doe,35,Male,+971501234567,john@example.com,Dental,Dental Implant,5000,Yes,Pending,Dubai Clinic,Dr. Smith,Morning,Call,Weekdays 9-5,Initial consultation,Hello, this is a follow-up call about your dental implant treatment
-Jane Smith,28,Female,+971502345678,jane@example.com,Cosmetic,Botox,2500,Yes,Contacted,Abu Dhabi Clinic,Dr. Johnson,Afternoon,SMS,Weekends only,Interested in package deals,We're offering a special discount on our cosmetic treatments

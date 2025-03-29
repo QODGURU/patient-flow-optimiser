@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { TimeSlotSettings } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,19 +27,8 @@ const daysOfWeek = [
 ];
 
 interface OutreachTimeSettingProps {
-  initialSettings?: {
-    startTime: string;
-    endTime: string;
-    excludedDays: string[];
-  };
-  onSave?: (settings: {
-    startTime: string;
-    endTime: string;
-    excludedDays: string[];
-  }) => void;
-  id?: string;
-  value?: string;
-  onChange?: (value: string) => void;
+  initialSettings?: TimeSlotSettings;
+  onSave?: (settings: TimeSlotSettings) => void;
 }
 
 const OutreachTimeSetting = ({
@@ -48,25 +38,15 @@ const OutreachTimeSetting = ({
     excludedDays: ["Friday", "Saturday"],
   },
   onSave,
-  id,
-  value,
-  onChange,
 }: OutreachTimeSettingProps) => {
   const { t } = useLanguage();
-  const [settings, setSettings] = useState(initialSettings);
+  const [settings, setSettings] = useState<TimeSlotSettings>(initialSettings);
 
-  // If value and onChange are provided, use them instead of the internal state
-  const effectiveValue = value || (id === 'start-time' ? settings.startTime : settings.endTime);
-
-  const handleTimeChange = (time: string) => {
-    if (onChange) {
-      onChange(time);
-    } else {
-      setSettings((prev) => ({
-        ...prev,
-        [id === 'start-time' ? 'startTime' : 'endTime']: time,
-      }));
-    }
+  const handleTimeChange = (field: "startTime" | "endTime", value: string) => {
+    setSettings((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleDayToggle = (day: string) => {
@@ -105,14 +85,76 @@ const OutreachTimeSetting = ({
   };
 
   return (
-    <div className="w-full">
-      <Input
-        id={id}
-        type="time"
-        value={effectiveValue}
-        onChange={(e) => handleTimeChange(e.target.value)}
-      />
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Clock className="mr-2 h-5 w-5 text-primary" />
+          {t("outreachTimeSettings")}
+        </CardTitle>
+        <CardDescription>
+          {t("setTimeRangeForPatient")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="startTime">{t("startTime")}</Label>
+            <Input
+              id="startTime"
+              type="time"
+              value={settings.startTime}
+              onChange={(e) => handleTimeChange("startTime", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("earliestTimeToContact")}
+            </p>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="endTime">{t("endTime")}</Label>
+            <Input
+              id="endTime"
+              type="time"
+              value={settings.endTime}
+              onChange={(e) => handleTimeChange("endTime", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("latestTimeToContact")}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Label>{t("excludedDays")}</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {daysOfWeek.map((day) => (
+              <div key={day} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`day-${day}`}
+                  checked={settings.excludedDays.includes(day)}
+                  onCheckedChange={() => handleDayToggle(day)}
+                />
+                <Label
+                  htmlFor={`day-${day}`}
+                  className="text-sm font-normal"
+                >
+                  {day}
+                </Label>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("systemWillNotSendFollowUps")}
+          </p>
+        </div>
+
+        <div className="pt-4 flex justify-end">
+          <Button onClick={saveSettings}>
+            {t("saveSettings")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
