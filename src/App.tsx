@@ -14,9 +14,9 @@ import NotFoundPage from "./pages/NotFoundPage";
 import AdminOnlyPage from "./pages/AdminOnlyPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ColdLeadsPage from "./pages/ColdLeadsPage";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./hooks/use-auth";
 import Index from "./pages/Index";
-import { Toaster } from "./components/ui/toaster";
+import { Toaster } from "sonner";
 
 function App() {
   return (
