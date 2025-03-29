@@ -52,11 +52,10 @@ const PatientsPage = () => {
 
       // Apply status filter if not "all"
       if (statusFilter !== "all") {
-        // The database expects capitalized status values
-        // The PatientStatus type values are lowercase, but DB values are capitalized
-        const dbStatusMap: Record<string, string> = {
+        // Map our frontend PatientStatus to the database enum values
+        const dbPatientStatusMap: Record<string, string> = {
           "pending": "Pending",
-          "contacted": "Contacted",
+          "contacted": "Contacted", 
           "interested": "Interested",
           "booked": "Booked",
           "cold": "Cold",
@@ -64,8 +63,8 @@ const PatientsPage = () => {
         };
         
         // Make sure the status exists in our map before applying the filter
-        if (dbStatusMap[statusFilter]) {
-          query = query.eq('status', dbStatusMap[statusFilter]);
+        if (dbPatientStatusMap[statusFilter]) {
+          query = query.eq('status', dbPatientStatusMap[statusFilter]);
         }
       }
       

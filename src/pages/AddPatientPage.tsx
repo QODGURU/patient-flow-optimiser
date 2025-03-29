@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -30,11 +31,6 @@ interface PatientFormData {
   script: string;
 }
 
-// Import FileUploader props interface - we'll adapt to what it actually accepts
-interface FileUploaderProps {
-  // Remove properties that don't exist on the component
-}
-
 const AddPatientPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -62,6 +58,16 @@ const AddPatientPage = () => {
   const onSubmit = async (data: PatientFormData) => {
     setIsLoading(true);
     try {
+      // Map our frontend PatientStatus to the database enum values
+      const dbPatientStatusMap: Record<string, any> = {
+        "pending": "Pending",
+        "contacted": "Contacted", 
+        "interested": "Interested",
+        "booked": "Booked",
+        "cold": "Cold",
+        "opt-out": "Opt-out"
+      };
+
       // Format the data for Supabase with correct types
       const patientData = {
         name: data.name,
@@ -76,8 +82,7 @@ const AddPatientPage = () => {
         script: data.script,
         doctor_id: user?.id,
         clinic_id: user?.clinicName, // This should be updated to use actual clinic ID
-        // Use capitalized status value to match database enum
-        status: 'Pending', // The database expects capitalized values like "Pending" not "pending"
+        status: dbPatientStatusMap["pending"], // Match the exact enum value expected by the database
         created_at: new Date().toISOString(),
         last_modified: new Date().toISOString(),
         last_modified_by: user?.id,
@@ -129,7 +134,6 @@ const AddPatientPage = () => {
   };
 
   return (
-    
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Add Patient</h1>
       <p className="text-muted-foreground">
@@ -316,7 +320,7 @@ const AddPatientPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* FileUploader component without props that don't exist */}
+              {/* FileUploader component without props */}
               <FileUploader />
               
               <div className="mt-4">
