@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
@@ -18,46 +19,61 @@ import Index from "./pages/Index";
 import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./components/ui/button";
+import { testSupabaseConnection } from "@/integrations/supabase/client";
 
 // Admin bypass button component for development purposes only
 const AdminBypass = () => {
   const { bypassAuth } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => !!localStorage.getItem("admin_bypass"));
   
   useEffect(() => {
-    // Check if admin state is stored in local storage
-    const storedAdminState = localStorage.getItem('adminBypass');
-    if (storedAdminState === 'true') {
-      handleBypassImplementation();
-    }
+    // Update admin state based on localStorage
+    const handleStorageChange = () => {
+      setIsAdmin(!!localStorage.getItem("admin_bypass"));
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    document.addEventListener("bypass-changed", handleStorageChange);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("bypass-changed", handleStorageChange);
+    };
   }, []);
   
   const handleBypassImplementation = async () => {
     setIsLoading(true);
     try {
+      // Test connection before bypass
+      const connectionTest = await testSupabaseConnection();
+      if (!connectionTest.success) {
+        toast.error("Cannot bypass auth: Supabase connection failed");
+        setIsLoading(false);
+        return;
+      }
+      
       await bypassAuth();
       setIsAdmin(true);
-      localStorage.setItem('adminBypass', 'true');
-      // Don't redirect here - let the normal routing handle it
+      // Dispatch a custom event to notify other components
+      document.dispatchEvent(new Event("bypass-changed"));
       toast.success("Admin access granted (DEVELOPMENT ONLY)");
     } catch (error) {
       console.error("Bypass error:", error);
       toast.error("Admin bypass failed");
-      localStorage.removeItem('adminBypass');
+      localStorage.removeItem("admin_bypass");
+      setIsAdmin(false);
     } finally {
       setIsLoading(false);
     }
   };
   
-  const handleBypass = () => {
-    handleBypassImplementation();
-  };
-  
   const handleLogout = () => {
-    localStorage.removeItem('adminBypass');
+    localStorage.removeItem("admin_bypass");
     setIsAdmin(false);
-    window.location.href = '/login';
+    // Dispatch a custom event to notify other components
+    document.dispatchEvent(new Event("bypass-changed"));
+    window.location.href = "/login";
   };
   
   if (isLoading) {
@@ -86,7 +102,7 @@ const AdminBypass = () => {
   
   return (
     <Button
-      onClick={handleBypass}
+      onClick={handleBypassImplementation}
       className="fixed bottom-4 right-4 bg-red-50 text-red-800 p-2 rounded-full shadow-lg hover:bg-red-100 z-50 flex items-center justify-center"
       title="Bypass Authentication (ADMIN MODE)"
     >
@@ -175,6 +191,15 @@ const AppRoutes = () => {
 };
 
 function App() {
+  // Check for connection on startup
+  useEffect(() => {
+    testSupabaseConnection().then(result => {
+      if (!result.success) {
+        console.error("⚠️ Supabase connection test failed", result.error);
+      }
+    });
+  }, []);
+
   return (
     <AuthProvider>
       <Router>

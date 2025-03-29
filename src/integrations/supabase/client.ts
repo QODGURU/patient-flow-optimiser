@@ -14,11 +14,16 @@ export const supabase = createClient<Database>(
       persistSession: true,
       storage: localStorage,
       autoRefreshToken: true,
-      debug: true, // Enable debug mode for better error logging
+      detectSessionInUrl: true, // Detect OAuth session in URL
     },
     global: {
       headers: {
         'Content-Type': 'application/json',
+      },
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
       },
     },
   }
@@ -39,11 +44,33 @@ export const getCurrentUserProfile = async () => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return { profile: null, error: new Error('No active session') };
   
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single();
-    
-  return { profile: data, error };
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+      
+    if (error) throw error;
+    return { profile: data, error: null };
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    return { profile: null, error };
+  }
 };
+
+// Test connection to Supabase
+export const testSupabaseConnection = async () => {
+  try {
+    const { error } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
+    if (error) throw error;
+    console.log("✅ Supabase connection successful");
+    return { success: true, error: null };
+  } catch (error) {
+    console.error("❌ Supabase connection failed:", error);
+    return { success: false, error };
+  }
+};
+
+// Call test connection on import
+testSupabaseConnection();

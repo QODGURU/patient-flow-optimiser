@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -18,9 +19,29 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
     // Simplified auth check that uses the context directly
     const verifyAuth = async () => {
       if (!isLoading) {
+        // Check if we're using admin bypass (for development)
+        const adminBypass = localStorage.getItem("admin_bypass");
+        if (adminBypass) {
+          try {
+            const mockProfile = JSON.parse(adminBypass);
+            if (adminOnly && mockProfile.role !== "admin") {
+              console.log("Admin bypass user is not admin, redirecting to dashboard");
+              toast.error("You don't have permission to access this page");
+              navigate("/dashboard");
+              return;
+            }
+            setVerifying(false);
+            return;
+          } catch (error) {
+            console.error("Error parsing admin bypass:", error);
+            localStorage.removeItem("admin_bypass");
+          }
+        }
+
         // Check if user is authenticated via context
         if (!isAuthenticated) {
           console.log("User not authenticated, redirecting to login");
+          toast.error("Please log in to access this page");
           navigate("/login");
           return;
         }
@@ -43,9 +64,9 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
   // Show loading state during verification
   if (isLoading || verifying) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-medical-teal"></div>
-        <span className="ml-3">Verifying access...</span>
+      <div className="flex flex-col justify-center items-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-medical-teal" />
+        <span className="mt-4 text-gray-700">Verifying access...</span>
       </div>
     );
   }

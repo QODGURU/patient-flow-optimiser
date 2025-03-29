@@ -28,6 +28,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialize auth state
   useEffect(() => {
     console.log("Setting up auth state listener");
+    
+    // Check for admin bypass (development only)
+    const checkAdminBypass = () => {
+      const adminBypass = localStorage.getItem("admin_bypass");
+      if (adminBypass) {
+        try {
+          const mockProfile = JSON.parse(adminBypass) as Profile;
+          setProfile(mockProfile);
+          setUser({ id: mockProfile.id, email: mockProfile.email } as User);
+          setIsLoading(false);
+          return true;
+        } catch (error) {
+          console.error("Error parsing admin bypass:", error);
+          localStorage.removeItem("admin_bypass");
+        }
+      }
+      return false;
+    };
+    
+    // If admin bypass exists, skip normal auth
+    if (checkAdminBypass()) {
+      console.log("Using admin bypass");
+      return;
+    }
+    
     // Set up auth state listener FIRST to prevent missing auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
@@ -55,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (initialSession) {
-          console.log("Found existing session:", initialSession);
+          console.log("Found existing session:", initialSession.user.email);
           setSession(initialSession);
           setUser(initialSession.user);
           await fetchProfile(initialSession.user.id);
@@ -137,6 +162,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     setIsLoading(true);
     try {
+      // Check for admin bypass first
+      if (localStorage.getItem("admin_bypass")) {
+        localStorage.removeItem("admin_bypass");
+        setUser(null);
+        setProfile(null);
+        setSession(null);
+        toast.success("Logged out successfully");
+        setIsLoading(false);
+        return;
+      }
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -168,6 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: "admin",
       };
       
+      localStorage.setItem("admin_bypass", JSON.stringify(mockProfile));
       setProfile(mockProfile);
       // Set minimal user object to make isAuthenticated true
       setUser({ id: "bypass-admin-id", email: "admin@example.com" } as User);
@@ -196,7 +233,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     profile,
     session,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user || !!localStorage.getItem("admin_bypass"),
     isLoading,
     login,
     logout,
