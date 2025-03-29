@@ -74,7 +74,7 @@ export function useMutateSupabase() {
       const { data: result, error } = await supabase
         .from(tableName)
         .update(data as any)
-        .eq('id', id)
+        .eq('id', id as string)
         .select();
 
       if (error) {
@@ -113,7 +113,7 @@ export function useMutateSupabase() {
       const { error } = await supabase
         .from(tableName)
         .delete()
-        .eq('id', id);
+        .eq('id', id as string);
 
       if (error) {
         console.error(`Error deleting from ${tableName}:`, error);

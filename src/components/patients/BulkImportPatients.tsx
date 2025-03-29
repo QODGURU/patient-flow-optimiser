@@ -12,6 +12,7 @@ import { DownloadCloud, FileSpreadsheet, AlertCircle, InfoIcon } from "lucide-re
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
 interface BulkImportPatientsProps {
   onSuccess: () => void;
@@ -132,25 +133,25 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
               }
               
               // Map spreadsheet columns to database fields - ensure required fields are present
-              const patientData = {
-                name: record['Patient Name'] || record['Name'] || '', // Ensure required field is present
-                phone: record['Phone'] || record['Phone Number'] || '', // Ensure required field is present
+              const patientData: Database['public']['Tables']['patients']['Insert'] = {
+                name: (record['Patient Name'] || record['Name'] || '') as string,
+                phone: (record['Phone'] || record['Phone Number'] || '') as string,
                 age: record['Age'] ? Number(record['Age']) : null,
-                gender: record['Gender'] || null,
-                email: record['Email'] || null,
-                treatment_category: record['Treatment Category'] || null,
-                treatment_type: record['Treatment Type'] || record['Treatment'] || null,
+                gender: (record['Gender'] || null) as string | null,
+                email: (record['Email'] || null) as string | null,
+                treatment_category: (record['Treatment Category'] || null) as string | null,
+                treatment_type: (record['Treatment Type'] || record['Treatment'] || null) as string | null,
                 price: record['Price (AED)'] || record['Price'] ? Number(record['Price (AED)'] || record['Price']) : null,
                 follow_up_required: record['Follow-Up Required'] === 'Yes' || record['Follow Up'] === 'Yes',
-                status: (record['Status'] || 'Pending') as 'Pending' | 'Contacted' | 'Interested' | 'Booked' | 'Cold',
-                preferred_time: record['Preferred Follow-Up Time'] || record['Preferred Time'] as 'Morning' | 'Afternoon' | 'Evening' | undefined,
-                preferred_channel: record['Preferred Channel'] as 'Call' | 'SMS' | 'Email' | undefined,
-                availability_preferences: record['Availability Preferences'] || record['Availability'] || null,
-                notes: record['Notes'] || null,
-                script: record['Script'] || null,
-                doctor_id: profile?.id || null,
-                clinic_id: profile?.clinic_id || record['Clinic ID'] || null,
-                last_modified_by: profile?.id || null,
+                status: (record['Status'] || 'Pending') as Database['public']['Enums']['patient_status'],
+                preferred_time: (record['Preferred Follow-Up Time'] || record['Preferred Time']) as Database['public']['Enums']['follow_up_time'] | null,
+                preferred_channel: (record['Preferred Channel']) as Database['public']['Enums']['follow_up_channel'] | null,
+                availability_preferences: (record['Availability Preferences'] || record['Availability'] || null) as string | null,
+                notes: (record['Notes'] || null) as string | null,
+                script: (record['Script'] || null) as string | null,
+                doctor_id: (profile?.id || null) as string | null,
+                clinic_id: (profile?.clinic_id || record['Clinic ID'] || null) as string | null,
+                last_modified_by: (profile?.id || null) as string | null,
               };
               
               // Double-check required fields (defensive programming)

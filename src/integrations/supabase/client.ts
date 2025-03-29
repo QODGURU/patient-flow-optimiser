@@ -27,17 +27,6 @@ export const supabase = createClient<Database>(
         eventsPerSecond: 10,
       },
     },
-    // Add improved fetch configuration
-    fetch: (url, options) => {
-      const timeout = 30000; // 30s timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
-      return fetch(url, {
-        ...options,
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeoutId));
-    },
     // Improved db connection
     db: {
       schema: 'public',
@@ -63,7 +52,7 @@ export const getCurrentUserProfile = async () => {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', session.user.id)
+    .eq('id', session.user.id as string)
     .single();
     
   return { profile: data, error };

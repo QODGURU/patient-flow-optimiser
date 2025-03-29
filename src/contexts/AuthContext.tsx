@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", userId)
+        .eq("id", userId as string)
         .single();
       
       if (error) {
