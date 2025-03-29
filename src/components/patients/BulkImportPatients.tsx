@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { CardContent, CardFooter } from "@/components/ui/card";
@@ -94,7 +93,7 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
               }
               
               // Map spreadsheet columns to database fields
-              const patientData: Partial<Patient> = {
+              const patientData: Patient = {
                 name: record['Patient Name'] || record['Name'],
                 age: record['Age'] ? Number(record['Age']) : null,
                 gender: record['Gender'],
@@ -104,9 +103,9 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
                 treatment_type: record['Treatment Type'] || record['Treatment'] || null,
                 price: record['Price (AED)'] || record['Price'] ? Number(record['Price (AED)'] || record['Price']) : null,
                 follow_up_required: record['Follow-Up Required'] === 'Yes' || record['Follow Up'] === 'Yes',
-                status: record['Status'] || 'Pending',
-                preferred_time: record['Preferred Follow-Up Time'] || record['Preferred Time'] as any || null,
-                preferred_channel: record['Preferred Channel'] as any || null,
+                status: (record['Status'] || 'Pending') as 'Pending' | 'Contacted' | 'Interested' | 'Booked' | 'Cold',
+                preferred_time: record['Preferred Follow-Up Time'] || record['Preferred Time'] as 'Morning' | 'Afternoon' | 'Evening' | undefined,
+                preferred_channel: record['Preferred Channel'] as 'Call' | 'SMS' | 'Email' | undefined,
                 availability_preferences: record['Availability Preferences'] || record['Availability'] || null,
                 notes: record['Notes'] || null,
                 script: record['Script'] || null,

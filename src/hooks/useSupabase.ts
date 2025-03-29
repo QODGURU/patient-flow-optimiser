@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
@@ -135,7 +134,7 @@ export function useMutateSupabase() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const insert = async <T>(tableName: TableName, data: T) => {
+  const insert = async <T extends { id?: string }>(tableName: TableName, data: T) => {
     setLoading(true);
     setError(null);
 

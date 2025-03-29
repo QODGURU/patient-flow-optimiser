@@ -21,19 +21,19 @@ export type Clinic = {
 }
 
 export type Patient = {
-  id: string;
+  id?: string; // Make ID optional since it's auto-generated on insert
   name: string;
-  age?: number;
+  age?: number | null;
   gender?: string;
   phone: string;
-  email?: string;
-  doctor_id?: string;
-  clinic_id?: string;
-  treatment_category?: string;
-  treatment_type?: string;
-  price?: number;
+  email?: string | null;
+  doctor_id?: string | null;
+  clinic_id?: string | null;
+  treatment_category?: string | null;
+  treatment_type?: string | null;
+  price?: number | null;
   follow_up_required?: boolean;
-  status: 'Interested' | 'Not Interested' | 'Pending' | 'Contacted' | 'Booked' | 'Cold';
+  status?: 'Interested' | 'Not Interested' | 'Pending' | 'Contacted' | 'Booked' | 'Cold';
   created_at?: string;
   next_interaction?: string;
   last_interaction?: string;
@@ -47,16 +47,15 @@ export type Patient = {
   availability_preferences?: string;
   notes?: string;
   interaction_rating?: 'Positive' | 'Neutral' | 'Negative';
-  patient_feedback?: string;
   last_modified?: string;
   last_modified_by?: string;
   script?: string;
   cold_reason?: string;
   // VoIP fields
-  voip_call_id?: string;
-  voip_call_status?: string;
-  voip_call_timestamp?: string;
-  voip_call_duration?: number;
+  voip_call_id?: string | null;
+  voip_call_status?: string | null;
+  voip_call_timestamp?: string | null;
+  voip_call_duration?: number | null;
 }
 
 export type FollowUp = {
