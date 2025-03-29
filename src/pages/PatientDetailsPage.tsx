@@ -53,12 +53,39 @@ const PatientDetailsPage = () => {
   const [notes, setNotes] = useState("");
   const [nextInteraction, setNextInteraction] = useState<Date | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [manualPatientData, setManualPatientData] = useState<Patient | null>(null);
+
+  // Check if we have demo data
+  useEffect(() => {
+    if (patientId) {
+      const demoPatients = localStorage.getItem("demo_patients");
+      if (demoPatients) {
+        try {
+          const parsedPatients = JSON.parse(demoPatients);
+          const patient = parsedPatients.find((p: Patient) => p.id === patientId);
+          if (patient) {
+            console.log("Found patient in demo data:", patient);
+            setManualPatientData(patient);
+            
+            // Set initial form values
+            setName(patient.name);
+            setPhone(patient.phone);
+            setEmail(patient.email || "");
+            setNotes(patient.notes || "");
+            setNextInteraction(patient.next_interaction ? new Date(patient.next_interaction) : undefined);
+          }
+        } catch (error) {
+          console.error("Error parsing demo patients:", error);
+        }
+      }
+    }
+  }, [patientId]);
 
   const { data: patient, loading: patientLoading } = useSupabaseQuery<Patient>(
     "patients",
     {
       filters: { id: patientId },
-      enabled: !!patientId,
+      enabled: !!patientId && !manualPatientData,
     }
   );
 
@@ -69,14 +96,14 @@ const PatientDetailsPage = () => {
   const { update, remove, loading: mutationLoading } = useMutateSupabase();
 
   useEffect(() => {
-    if (patient && patient.length > 0) {
+    if (patient && patient.length > 0 && !manualPatientData) {
       setName(patient[0].name);
       setPhone(patient[0].phone);
       setEmail(patient[0].email || "");
       setNotes(patient[0].notes || "");
       setNextInteraction(patient[0].next_interaction ? new Date(patient[0].next_interaction) : undefined);
     }
-  }, [patient]);
+  }, [patient, manualPatientData]);
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -84,7 +111,13 @@ const PatientDetailsPage = () => {
 
   const handleCancelClick = () => {
     setIsEditing(false);
-    if (patient && patient.length > 0) {
+    if (manualPatientData) {
+      setName(manualPatientData.name);
+      setPhone(manualPatientData.phone);
+      setEmail(manualPatientData.email || "");
+      setNotes(manualPatientData.notes || "");
+      setNextInteraction(manualPatientData.next_interaction ? new Date(manualPatientData.next_interaction) : undefined);
+    } else if (patient && patient.length > 0) {
       setName(patient[0].name);
       setPhone(patient[0].phone);
       setEmail(patient[0].email || "");
@@ -97,6 +130,36 @@ const PatientDetailsPage = () => {
     if (!patientId) return;
 
     try {
+      // If we're in demo mode, update localStorage instead of database
+      if (manualPatientData) {
+        const demoPatients = localStorage.getItem("demo_patients");
+        if (demoPatients) {
+          const parsedPatients = JSON.parse(demoPatients);
+          const updatedPatients = parsedPatients.map((p: Patient) => {
+            if (p.id === patientId) {
+              return {
+                ...p,
+                name,
+                phone,
+                email,
+                notes,
+                next_interaction: nextInteraction?.toISOString() || null,
+                last_modified: new Date().toISOString(),
+              };
+            }
+            return p;
+          });
+          
+          // Update localStorage and state
+          localStorage.setItem("demo_patients", JSON.stringify(updatedPatients));
+          setManualPatientData({ ...manualPatientData, name, phone, email, notes });
+          toast.success("Patient details updated successfully");
+          setIsEditing(false);
+          return;
+        }
+      }
+      
+      // Otherwise use Supabase
       await update("patients", patientId, {
         name,
         phone,
@@ -121,6 +184,31 @@ const PatientDetailsPage = () => {
     if (!patientId) return;
 
     try {
+      // If we're in demo mode, update localStorage instead of database
+      if (manualPatientData) {
+        const demoPatients = localStorage.getItem("demo_patients");
+        if (demoPatients) {
+          const parsedPatients = JSON.parse(demoPatients);
+          const updatedPatients = parsedPatients.filter((p: Patient) => p.id !== patientId);
+          
+          // Update localStorage
+          localStorage.setItem("demo_patients", JSON.stringify(updatedPatients));
+          
+          // Also update follow-ups in localStorage to remove any for this patient
+          const demoFollowUps = localStorage.getItem("demo_follow_ups");
+          if (demoFollowUps) {
+            const parsedFollowUps = JSON.parse(demoFollowUps);
+            const updatedFollowUps = parsedFollowUps.filter((f: FollowUp) => f.patient_id !== patientId);
+            localStorage.setItem("demo_follow_ups", JSON.stringify(updatedFollowUps));
+          }
+          
+          toast.success("Patient deleted successfully");
+          navigate("/patients");
+          return;
+        }
+      }
+      
+      // Otherwise use Supabase
       await remove("patients", patientId);
       toast.success("Patient deleted successfully");
       navigate("/patients");
@@ -131,14 +219,18 @@ const PatientDetailsPage = () => {
     }
   };
 
-  if (patientLoading) {
+  if (patientLoading && !manualPatientData) {
     return <div>Loading patient details...</div>;
   }
 
-  if (!patient || patient.length === 0) {
+  // If we don't have a patient object either from Supabase or demo data
+  if (!manualPatientData && (!patient || patient.length === 0)) {
     return <div>Patient not found</div>;
   }
 
+  // Use either the manual data or the first patient from Supabase
+  const patientData = manualPatientData || patient[0];
+  
   const {
     age,
     gender,
@@ -160,7 +252,7 @@ const PatientDetailsPage = () => {
     call_transcript,
     interaction_rating,
     patient_feedback,
-  } = patient[0];
+  } = patientData;
 
   return (
     <div className="animate-fade-in">
