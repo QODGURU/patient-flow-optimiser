@@ -29,9 +29,12 @@ const AdminBypass = () => {
     // Check if admin state is stored in local storage
     const storedAdminState = localStorage.getItem('adminBypass');
     if (storedAdminState === 'true') {
-      setIsAdmin(true);
+      setTimeout(() => {
+        bypassAuth(); // Call bypassAuth directly with a small delay
+        setIsAdmin(true);
+      }, 100);
     }
-  }, []);
+  }, [bypassAuth]);
   
   const handleBypass = async () => {
     try {
@@ -39,6 +42,10 @@ const AdminBypass = () => {
       setIsAdmin(true);
       localStorage.setItem('adminBypass', 'true');
       toast.success("Admin access granted (DEVELOPMENT ONLY)");
+      // Force navigation to dashboard after bypass
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 500);
     } catch (error) {
       console.error("Bypass error:", error);
       toast.error("Admin bypass failed");

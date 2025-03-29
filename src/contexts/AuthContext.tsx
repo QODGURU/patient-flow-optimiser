@@ -27,6 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize auth state
   useEffect(() => {
+    console.log("Setting up auth state listener");
     // Set up auth state listener FIRST to prevent missing auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
@@ -170,6 +171,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setProfile(mockProfile);
       // Set minimal user object to make isAuthenticated true
       setUser({ id: "bypass-admin-id", email: "admin@example.com" } as User);
+      
+      // Create a mock session to simulate being logged in
+      const mockSession = {
+        access_token: "fake-token",
+        refresh_token: "fake-refresh-token",
+        expires_in: 3600,
+        expires_at: Date.now() + 3600000,
+        token_type: "bearer",
+        user: { id: "bypass-admin-id", email: "admin@example.com" } as User
+      } as Session;
+      
+      setSession(mockSession);
+      
       toast.success("Bypassed authentication as Admin!");
     } catch (error) {
       console.error("Bypass auth error:", error);
