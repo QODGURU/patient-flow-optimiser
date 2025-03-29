@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -55,8 +56,7 @@ const PatientsPage = () => {
         // Make sure the status exists in our map before applying the filter
         const frontendStatus = statusFilter as PatientStatus;
         if (frontendStatus in patientStatusToDatabaseStatus) {
-          // Get the database-compatible status value and explicitly type it
-          const dbStatus: DatabasePatientStatus = patientStatusToDatabaseStatus[frontendStatus];
+          const dbStatus = patientStatusToDatabaseStatus[frontendStatus];
           query = query.eq('status', dbStatus);
         }
       }

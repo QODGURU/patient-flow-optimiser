@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -20,7 +19,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import FileUploader from "@/components/FileUploader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatabasePatientStatus } from "@/types";
 import { Download } from "lucide-react";
 
 interface PatientFormData {
@@ -80,8 +78,8 @@ const AddPatientPage = () => {
         script: data.script || null,
         doctor_id: user?.id,
         clinic_id: user?.clinicName, // This should be updated to use actual clinic ID
-        // Use the correct enum value as defined in the database
-        status: "Pending" as DatabasePatientStatus,
+        // Use the Pending status which is in the database enum
+        status: "Pending",
         created_at: new Date().toISOString(),
         last_modified: new Date().toISOString(),
         last_modified_by: user?.id,
