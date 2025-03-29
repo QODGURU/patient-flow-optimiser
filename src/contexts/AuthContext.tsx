@@ -14,7 +14,7 @@ interface AuthContextProps {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  bypassAuth: () => Promise<void>; // Added bypass function for testing
+  bypassAuth: () => Promise<void>; // For development only
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -27,46 +27,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize auth state
   useEffect(() => {
+    // Set up auth state listener FIRST to prevent missing auth events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        console.log("Auth state changed:", event);
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        
+        // Defer Supabase calls with setTimeout to prevent deadlocks
+        if (newSession?.user) {
+          setTimeout(() => {
+            fetchProfile(newSession.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+    
+    // THEN check for existing session
     const initAuth = async () => {
       setIsLoading(true);
       
-      // Check for existing session
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      
-      if (initialSession) {
-        setSession(initialSession);
-        setUser(initialSession.user);
-        await fetchProfile(initialSession.user.id);
-      }
-      
-      setIsLoading(false);
-      
-      // Listen for auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, newSession) => {
-          console.log("Auth state changed:", event);
-          
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
-          
-          if (newSession?.user) {
-            await fetchProfile(newSession.user.id);
-          } else {
-            setProfile(null);
-          }
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (initialSession) {
+          console.log("Found existing session:", initialSession);
+          setSession(initialSession);
+          setUser(initialSession.user);
+          await fetchProfile(initialSession.user.id);
+        } else {
+          console.log("No existing session found");
         }
-      );
-      
-      return () => {
-        subscription.unsubscribe();
-      };
+      } catch (error) {
+        console.error("Error during auth initialization:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     initAuth();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -79,8 +90,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       if (data) {
-        setProfile(data as Profile);
         console.log("Fetched profile:", data);
+        setProfile(data as Profile);
+      } else {
+        console.log("No profile found for user:", userId);
       }
     } catch (error) {
       console.error("Error in fetchProfile:", error);
@@ -96,19 +109,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting login for:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
+        console.error("Login error:", error);
         toast.error(error.message || "Failed to login");
         throw error;
       }
       
       if (data.user) {
+        console.log("Login successful:", data.user.email);
         toast.success(`Welcome back, ${email}!`);
-        console.log("Login successful:", data);
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -140,7 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  // Bypass function for testing - creates a mock admin session
+  // For development only - creates a mock admin session
   const bypassAuth = async () => {
     setIsLoading(true);
     try {

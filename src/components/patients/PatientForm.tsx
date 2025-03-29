@@ -47,7 +47,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   const onSubmit = async (values: PatientFormValues) => {
     setIsSubmitting(true);
-    console.log("Submitting form with values:", values);
+    console.log("Submitting patient form with values:", values);
     
     try {
       // Transform the data to match the patient table structure
@@ -79,9 +79,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       
       toast.success(t("patientAddedSuccessfully"));
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding patient:", error);
-      toast.error(t("errorAddingPatient"));
+      toast.error(`Error adding patient: ${error.message || t("errorAddingPatient")}`);
     } finally {
       setIsSubmitting(false);
     }

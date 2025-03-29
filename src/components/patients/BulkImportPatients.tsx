@@ -80,6 +80,19 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
             try {
               console.log("Processing record:", record);
               
+              // Check if the record has required fields
+              if (!record['Patient Name'] && !record['Name']) {
+                console.warn("Skipping record due to missing name:", record);
+                errorCount++;
+                continue;
+              }
+              
+              if (!record['Phone'] && !record['Phone Number']) {
+                console.warn("Skipping record due to missing phone number:", record);
+                errorCount++;
+                continue;
+              }
+              
               // Map spreadsheet columns to database fields
               const patientData: Partial<Patient> = {
                 name: record['Patient Name'] || record['Name'],
@@ -100,21 +113,7 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
                 doctor_id: profile?.id,
                 clinic_id: profile?.clinic_id || record['Clinic ID'] || null,
                 last_modified_by: profile?.id,
-                // Ensure required fields have values
-                // If name or phone is missing, skip this record
-                ...((!record['Patient Name'] && !record['Name']) && {_skipRecord: true}),
-                ...((!record['Phone'] && !record['Phone Number']) && {_skipRecord: true}),
               };
-              
-              // Skip records missing required fields
-              if ((patientData as any)._skipRecord) {
-                console.warn("Skipping record due to missing required fields:", record);
-                errorCount++;
-                continue;
-              }
-              
-              // Remove any temporary fields
-              delete (patientData as any)._skipRecord;
               
               console.log("Inserting patient data:", patientData);
               await insert<Patient>("patients", patientData);
@@ -147,27 +146,23 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
           
           if (successCount > 0) {
             toast.success(`${successCount} patients imported successfully`);
-          }
-          
-          if (errorCount > 0) {
+            
+            // Only call onSuccess if at least one record was successfully imported
+            setTimeout(() => onSuccess(), 2000);
+          } else if (errorCount > 0) {
             toast.error(`${errorCount} patients failed to import`);
           }
-          
-          // Only call onSuccess if at least one record was successfully imported
-          if (successCount > 0) {
-            setTimeout(() => onSuccess(), 2000);
-          }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error processing Excel file:", error);
-          toast.error("Error parsing Excel file. Please check the format.");
+          toast.error(`Error parsing Excel file: ${error.message}`);
           setImportStatus(prev => ({...prev, processing: false}));
         }
       };
       
       reader.readAsArrayBuffer(file);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing file:", error);
-      toast.error("Error processing file");
+      toast.error(`Error processing file: ${error.message}`);
       setImportStatus(prev => ({...prev, processing: false}));
     }
   };

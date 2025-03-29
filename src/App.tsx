@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
@@ -14,81 +14,119 @@ import NotFoundPage from "./pages/NotFoundPage";
 import AdminOnlyPage from "./pages/AdminOnlyPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ColdLeadsPage from "./pages/ColdLeadsPage";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Index from "./pages/Index";
+import { KeyRound } from "lucide-react";
+import { toast } from "sonner";
+
+// Admin bypass button component for development purposes only
+const AdminBypass = () => {
+  const { bypassAuth } = useAuth();
+  
+  const handleBypass = async () => {
+    try {
+      await bypassAuth();
+      toast.success("Admin access granted (DEVELOPMENT ONLY)");
+    } catch (error) {
+      console.error("Bypass error:", error);
+    }
+  };
+  
+  return (
+    <button
+      onClick={handleBypass}
+      className="fixed bottom-4 right-4 bg-red-50 text-red-800 p-2 rounded-full shadow-lg hover:bg-red-100 z-50 flex items-center justify-center"
+      title="Bypass Authentication (ADMIN MODE)"
+    >
+      <KeyRound size={20} />
+    </button>
+  );
+};
+
+// AppRoutes component with admin bypass button
+const AppRoutes = () => {
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Layout>
+              <DashboardPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/patients" element={
+          <ProtectedRoute>
+            <Layout>
+              <PatientsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/patients/:id" element={
+          <ProtectedRoute>
+            <Layout>
+              <PatientDetailsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/add-patient" element={
+          <ProtectedRoute>
+            <Layout>
+              <AddPatientPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/cold-leads" element={
+          <ProtectedRoute>
+            <Layout>
+              <ColdLeadsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctors" element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <DoctorsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/follow-ups" element={
+          <ProtectedRoute>
+            <Layout>
+              <FollowUpsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <SettingsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <AdminOnlyPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      
+      {/* Add admin bypass button */}
+      <AdminBypass />
+    </>
+  );
+};
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Layout>
-                <DashboardPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/patients" element={
-            <ProtectedRoute>
-              <Layout>
-                <PatientsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/patients/:id" element={
-            <ProtectedRoute>
-              <Layout>
-                <PatientDetailsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/add-patient" element={
-            <ProtectedRoute>
-              <Layout>
-                <AddPatientPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/cold-leads" element={
-            <ProtectedRoute>
-              <Layout>
-                <ColdLeadsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/doctors" element={
-            <ProtectedRoute>
-              <Layout>
-                <DoctorsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/follow-ups" element={
-            <ProtectedRoute>
-              <Layout>
-                <FollowUpsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Layout>
-                <SettingsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin" element={
-            <ProtectedRoute adminOnly>
-              <Layout>
-                <AdminOnlyPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <AppRoutes />
       </Router>
     </AuthProvider>
   );

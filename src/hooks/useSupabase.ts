@@ -67,8 +67,15 @@ export function useSupabaseQuery<T>(
       
       const { count: totalCount, error: countError } = await filteredCountQuery;
       
-      if (countError) throw countError;
-      if (totalCount !== null) setCount(totalCount);
+      if (countError) {
+        console.error("Error getting count:", countError);
+        throw countError;
+      }
+      
+      if (totalCount !== null) {
+        setCount(totalCount);
+        console.log(`Total count for ${tableName}:`, totalCount);
+      }
 
       // Build main query
       let query = supabase
@@ -101,14 +108,17 @@ export function useSupabaseQuery<T>(
 
       const { data: fetchedData, error: fetchError } = await filteredQuery;
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("Error fetching data:", fetchError);
+        throw fetchError;
+      }
       
       console.log(`Retrieved ${fetchedData?.length || 0} rows from ${tableName}:`, fetchedData);
       setData(fetchedData as T[]);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Supabase query error:", err);
       setError(err as Error);
-      toast.error(`Error fetching data: ${(err as Error).message}`);
+      toast.error(`Error fetching data: ${err.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -132,6 +142,10 @@ export function useMutateSupabase() {
     try {
       console.log(`Inserting data into ${tableName}:`, data);
       
+      if (!data) {
+        throw new Error("No data provided for insert");
+      }
+      
       const { data: result, error } = await supabase
         .from(tableName)
         .insert(data as any)
@@ -144,10 +158,10 @@ export function useMutateSupabase() {
       
       console.log(`Successfully inserted into ${tableName}:`, result);
       return result;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Insert error:", err);
       setError(err as Error);
-      toast.error(`Error inserting data: ${(err as Error).message}`);
+      toast.error(`Error inserting data: ${err.message || 'Unknown error'}`);
       throw err;
     } finally {
       setLoading(false);
@@ -160,6 +174,14 @@ export function useMutateSupabase() {
 
     try {
       console.log(`Updating data in ${tableName} for id ${id}:`, data);
+      
+      if (!id) {
+        throw new Error("No ID provided for update");
+      }
+      
+      if (!data) {
+        throw new Error("No data provided for update");
+      }
       
       const { data: result, error } = await supabase
         .from(tableName)
@@ -174,10 +196,10 @@ export function useMutateSupabase() {
       
       console.log(`Successfully updated ${tableName}:`, result);
       return result;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Update error:", err);
       setError(err as Error);
-      toast.error(`Error updating data: ${(err as Error).message}`);
+      toast.error(`Error updating data: ${err.message || 'Unknown error'}`);
       throw err;
     } finally {
       setLoading(false);
@@ -191,6 +213,10 @@ export function useMutateSupabase() {
     try {
       console.log(`Deleting data from ${tableName} for id ${id}`);
       
+      if (!id) {
+        throw new Error("No ID provided for delete");
+      }
+      
       const { error } = await supabase
         .from(tableName)
         .delete()
@@ -203,10 +229,10 @@ export function useMutateSupabase() {
       
       console.log(`Successfully deleted from ${tableName} for id ${id}`);
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Delete error:", err);
       setError(err as Error);
-      toast.error(`Error deleting data: ${(err as Error).message}`);
+      toast.error(`Error deleting data: ${err.message || 'Unknown error'}`);
       throw err;
     } finally {
       setLoading(false);
