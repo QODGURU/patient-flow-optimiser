@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -11,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Patient } from "@/types";
+import { PatientStatus } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +33,8 @@ interface PatientFormData {
 
 // For FileUploader component
 interface FileUploaderProps {
-  userId: string;
+  onSuccess?: (result: any) => void;
+  onError?: (error: string) => void;
 }
 
 const AddPatientPage = () => {
@@ -76,7 +78,7 @@ const AddPatientPage = () => {
         script: data.script,
         doctor_id: user?.id,
         clinic_id: user?.clinicName, // This should be updated to use actual clinic ID
-        status: 'Pending', // Use the enum value directly as a string literal
+        status: 'Pending' as PatientStatus, // Explicitly cast to PatientStatus enum
         created_at: new Date().toISOString(),
         last_modified: new Date().toISOString(),
         last_modified_by: user?.id,
@@ -314,8 +316,11 @@ const AddPatientPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Removed props that aren't supported by the component */}
-              <FileUploader userId={user?.id || ""} />
+              {/* FileUploader without passing the userId prop */}
+              <FileUploader 
+                onSuccess={handleFileUploadSuccess} 
+                onError={handleFileUploadError}
+              />
               
               <div className="mt-4">
                 <h3 className="font-medium mb-2">Template Instructions:</h3>

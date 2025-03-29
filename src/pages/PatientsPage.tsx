@@ -51,12 +51,14 @@ const PatientsPage = () => {
           currentPage * ITEMS_PER_PAGE - 1
         );
 
-      // Apply status filter if not "all" - with type safety
+      // Apply status filter if not "all"
       if (statusFilter !== "all") {
-        // Convert string to PatientStatus enum with proper validation
-        const validStatusValues = ["Pending", "Contacted", "Interested", "Not Interested", "Booked", "Cold"];
-        if (validStatusValues.includes(statusFilter)) {
-          query = query.eq('status', statusFilter);
+        // Convert string to valid PatientStatus enum value
+        const validStatusValues: PatientStatus[] = ["pending", "contacted", "interested", "booked", "cold", "opt-out"];
+        const normalizedStatus = statusFilter.toLowerCase() as PatientStatus;
+        
+        if (validStatusValues.includes(normalizedStatus)) {
+          query = query.eq('status', normalizedStatus);
         }
       }
       
@@ -164,12 +166,12 @@ const PatientsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Contacted">Contacted</SelectItem>
-                  <SelectItem value="Interested">Interested</SelectItem>
-                  <SelectItem value="Not Interested">Not Interested</SelectItem>
-                  <SelectItem value="Booked">Booked</SelectItem>
-                  <SelectItem value="Cold">Cold</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="interested">Interested</SelectItem>
+                  <SelectItem value="booked">Booked</SelectItem>
+                  <SelectItem value="cold">Cold</SelectItem>
+                  <SelectItem value="opt-out">Opt-out</SelectItem>
                 </SelectContent>
               </Select>
             </div>
