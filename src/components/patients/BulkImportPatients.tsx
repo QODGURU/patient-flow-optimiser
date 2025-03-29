@@ -131,12 +131,12 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
                 continue;
               }
               
-              // Map spreadsheet columns to database fields
-              const patientData: Partial<Patient> = {
-                name: record['Patient Name'] || record['Name'],
+              // Map spreadsheet columns to database fields - ensure required fields are present
+              const patientData = {
+                name: record['Patient Name'] || record['Name'] || '', // Ensure required field is present
+                phone: record['Phone'] || record['Phone Number'] || '', // Ensure required field is present
                 age: record['Age'] ? Number(record['Age']) : null,
-                gender: record['Gender'],
-                phone: record['Phone'] || record['Phone Number'],
+                gender: record['Gender'] || null,
                 email: record['Email'] || null,
                 treatment_category: record['Treatment Category'] || null,
                 treatment_type: record['Treatment Type'] || record['Treatment'] || null,
@@ -148,10 +148,15 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
                 availability_preferences: record['Availability Preferences'] || record['Availability'] || null,
                 notes: record['Notes'] || null,
                 script: record['Script'] || null,
-                doctor_id: profile?.id,
+                doctor_id: profile?.id || null,
                 clinic_id: profile?.clinic_id || record['Clinic ID'] || null,
-                last_modified_by: profile?.id,
+                last_modified_by: profile?.id || null,
               };
+              
+              // Double-check required fields (defensive programming)
+              if (!patientData.name || !patientData.phone) {
+                throw new Error("Missing required fields: name and phone are required");
+              }
               
               console.log("Inserting patient data:", patientData);
               // Direct insert approach rather than using the hook to bypass any potential issues

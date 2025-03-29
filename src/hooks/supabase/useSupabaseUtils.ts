@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 
 // Use string literal type for tables 
-export type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings';
+export type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings' | 'api_configurations';
 
 // Utility function to check connection to Supabase
 export const checkConnection = async (tableName: TableName): Promise<boolean> => {
