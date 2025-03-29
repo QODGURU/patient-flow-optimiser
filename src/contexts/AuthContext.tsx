@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, createDemoAdminUser } from "@/integrations/supabase/client";
 import { Profile } from "@/types/supabase";
 import { toast } from "sonner";
 
@@ -156,6 +156,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       console.log("Attempting login for:", email);
+      
+      // Special case for demo login
+      if (email === "admin@example.com" && password === "demo") {
+        console.log("Demo login detected, creating demo user if needed");
+        const result = await createDemoAdminUser();
+        
+        if (result.success) {
+          // Set up demo admin bypass
+          await bypassAuth();
+          return;
+        } else {
+          console.error("Failed to set up demo admin account:", result.error);
+          throw new Error("Failed to set up demo account");
+        }
+      }
+      
+      // Normal Supabase login
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -225,13 +242,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("Attempting admin bypass");
       
-      // Create a mock admin profile - this is for testing only!
-      const mockProfile: Profile = {
-        id: "bypass-admin-id",
-        name: "Admin Bypass",
-        email: "admin@example.com",
-        role: "admin",
-      };
+      // Try to get a demo profile first
+      const result = await createDemoAdminUser();
+      let mockProfile: Profile;
+      
+      if (result.success && result.profile) {
+        mockProfile = result.profile as Profile;
+        console.log("Using existing demo profile for bypass:", mockProfile);
+      } else {
+        // Fallback to mock admin profile
+        mockProfile = {
+          id: "bypass-admin-id",
+          name: "Admin Bypass",
+          email: "admin@example.com",
+          role: "admin",
+        };
+        console.log("Using fallback mock profile for bypass");
+      }
       
       // Store in localStorage
       localStorage.setItem("admin_bypass", JSON.stringify(mockProfile));
@@ -239,7 +266,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Update state
       setProfile(mockProfile);
-      setUser({ id: "bypass-admin-id", email: "admin@example.com" } as User);
+      setUser({ id: mockProfile.id, email: mockProfile.email } as User);
       
       // Create a mock session to simulate being logged in
       const mockSession = {
@@ -248,7 +275,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         expires_in: 3600,
         expires_at: Date.now() + 3600000,
         token_type: "bearer",
-        user: { id: "bypass-admin-id", email: "admin@example.com" } as User
+        user: { id: mockProfile.id, email: mockProfile.email } as User
       } as Session;
       
       setSession(mockSession);
@@ -270,7 +297,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     } catch (error) {
       console.error("Bypass auth error:", error);
-      toast.error("Failed to bypass authentication: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast.error(`Failed to bypass authentication: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     } finally {
       setIsLoading(false);

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -47,8 +48,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const onSubmit = async (values: PatientFormValues) => {
     setIsSubmitting(true);
     console.log("Submitting patient form with values:", values);
+    console.log("Current user profile:", profile);
     
     try {
+      // Check authentication status directly
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session && !localStorage.getItem("admin_bypass")) {
+        throw new Error("Authentication required. Please log in again.");
+      }
+      
       // Transform the data to match the patient table structure
       const patientData = {
         name: values.name,
@@ -75,7 +83,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
       console.log("Sending patient data to Supabase:", patientData);
       
-      // Direct Supabase insert to troubleshoot any issues
+      // Direct Supabase insert with more detailed error handling
       const { data: result, error } = await supabase
         .from('patients')
         .insert(patientData)
@@ -84,14 +92,41 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       console.log("Insert result:", result);
       
       if (error) {
-        throw error;
+        console.error("Supabase error details:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        if (error.code === '42501') {
+          throw new Error("Permission denied. You may not have rights to add patients.");
+        } else if (error.code === '23505') {
+          throw new Error("A patient with this information already exists.");
+        } else {
+          throw error;
+        }
       }
       
       toast.success(t("patientAddedSuccessfully"));
       onSuccess();
     } catch (error: any) {
       console.error("Error adding patient:", error);
-      toast.error(`Error adding patient: ${error.message || t("errorAddingPatient")}`);
+      
+      // Provide more user-friendly error messages
+      let errorMessage = "An unknown error occurred";
+      
+      if (error.message.includes("JWT expired")) {
+        errorMessage = "Your session has expired. Please log in again.";
+      } else if (error.message.includes("Invalid JWT")) {
+        errorMessage = "Invalid authentication. Please log in again.";
+      } else if (error.message.includes("Permission denied")) {
+        errorMessage = "You don't have permission to add patients.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(`Error adding patient: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

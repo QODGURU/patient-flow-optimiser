@@ -34,11 +34,32 @@ export const supabase = createClient<Database>(
 // Utility function to check if a user is authenticated
 export const isUserAuthenticated = async () => {
   try {
+    // First check for admin bypass
+    if (localStorage.getItem("admin_bypass")) {
+      console.log("Admin bypass detected during authentication check");
+      return { 
+        isAuthenticated: true, 
+        session: null, 
+        error: null 
+      };
+    }
+    
+    // Then check Supabase auth
     const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error("Error checking authentication session:", error);
+      return { 
+        isAuthenticated: false, 
+        session: null, 
+        error 
+      };
+    }
+    
     return { 
       isAuthenticated: !!data.session, 
       session: data.session, 
-      error 
+      error: null
     };
   } catch (error) {
     console.error("Error checking authentication:", error);
@@ -53,6 +74,21 @@ export const isUserAuthenticated = async () => {
 // Utility function to get current user profile
 export const getCurrentUserProfile = async () => {
   try {
+    // First check for admin bypass
+    const adminBypass = localStorage.getItem("admin_bypass");
+    if (adminBypass) {
+      try {
+        console.log("Admin bypass detected during profile fetch");
+        const mockProfile = JSON.parse(adminBypass);
+        return { profile: mockProfile, error: null };
+      } catch (error) {
+        console.error("Error parsing admin bypass:", error);
+        localStorage.removeItem("admin_bypass");
+        return { profile: null, error: new Error('Invalid admin bypass data') };
+      }
+    }
+    
+    // Get session from Supabase
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { profile: null, error: new Error('No active session') };
     
@@ -72,6 +108,58 @@ export const getCurrentUserProfile = async () => {
   } catch (error) {
     console.error("Error getting session:", error);
     return { profile: null, error };
+  }
+};
+
+// Create demo admin account in profiles to test with
+export const createDemoAdminUser = async () => {
+  console.log("Attempting to create demo admin user...");
+  
+  try {
+    // Check if admin@example.com exists in profiles
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', 'admin@example.com')
+      .maybeSingle();
+    
+    if (checkError) {
+      console.error("Error checking for existing admin profile:", checkError);
+      return { success: false, error: checkError };
+    }
+    
+    // If admin already exists, return success
+    if (existingProfile) {
+      console.log("Demo admin user already exists:", existingProfile);
+      return { success: true, profile: existingProfile, error: null };
+    }
+    
+    // Create a new demo admin profile
+    const demoProfile = {
+      id: "demo-admin-id",
+      name: "Demo Admin",
+      email: "admin@example.com",
+      role: "admin",
+      phone: "+971551234567",
+    };
+    
+    const { data: newProfile, error: insertError } = await supabase
+      .from('profiles')
+      .insert(demoProfile)
+      .select()
+      .single();
+    
+    if (insertError) {
+      console.error("Error creating demo admin profile:", insertError);
+      return { success: false, error: insertError };
+    }
+    
+    console.log("Successfully created demo admin user:", newProfile);
+    return { success: true, profile: newProfile, error: null };
+    
+  } catch (error) {
+    console.error("Unexpected error creating demo admin:", error);
+    return { success: false, error };
   }
 };
 
@@ -128,11 +216,20 @@ export const testSupabaseConnection = async () => {
   }
 };
 
-// Run connection test on import
+// Run connection test and create demo user on import
 console.log("Initializing Supabase client and testing connection...");
 testSupabaseConnection().then(result => {
   if (result.success) {
     console.log(`Supabase connection successful (latency: ${result.latency}ms)`);
+    
+    // Create demo admin user if connection is successful
+    createDemoAdminUser().then(adminResult => {
+      if (adminResult.success) {
+        console.log("Demo admin user ready for testing");
+      } else {
+        console.error("Failed to ensure demo admin user exists:", adminResult.error);
+      }
+    });
   } else {
     console.error("Supabase connection failed:", result.error);
     // Don't show toast on initial load as it's jarring
