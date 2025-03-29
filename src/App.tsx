@@ -16,6 +16,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ColdLeadsPage from "./pages/ColdLeadsPage";
 import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
+import { Toaster } from "./components/ui/toaster";
 
 function App() {
   return (
@@ -89,6 +90,7 @@ function App() {
           } />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        <Toaster />
       </Router>
     </AuthProvider>
   );

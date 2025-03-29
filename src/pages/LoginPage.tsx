@@ -1,103 +1,198 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
-import { UserRole } from "@/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+
+interface LoginFormValues {
+  email: string;
+  password: string;
+}
+
+interface SignupFormValues extends LoginFormValues {
+  name: string;
+  confirmPassword: string;
+}
 
 const LoginPage = () => {
+  const { login, signup, isLoading } = useAuth();
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [activeTab, setActiveTab] = useState<UserRole>("doctor");
+  const { toast } = useToast();
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const loginForm = useForm<LoginFormValues>({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const signupForm = useForm<SignupFormValues>({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  const handleLoginSubmit = async (data: LoginFormValues) => {
     try {
-      await login(email, password, activeTab);
-      toast.success(`Welcome back!`);
-      navigate("/");
+      await login(data.email, data.password);
+      navigate("/dashboard");
     } catch (error) {
-      toast.error("Invalid credentials. Please try again.");
+      // Error is handled in the useAuth hook
+      console.error("Login error:", error);
+    }
+  };
+
+  const handleSignupSubmit = async (data: SignupFormValues) => {
+    if (data.password !== data.confirmPassword) {
+      toast({
+        title: "Passwords do not match",
+        description: "Please ensure your passwords match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await signup(data.email, data.password, data.name);
+      // If email verification is disabled, the user will be automatically logged in
+      toast({
+        title: "Account created",
+        description: "Your account has been created successfully.",
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      // Error is handled in the useAuth hook
+      console.error("Signup error:", error);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-medical-light-blue p-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-medical-navy">
-            Patient Flow Optimiser
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Login to manage your patient follow-ups
-          </p>
-        </div>
-
-        <Tabs defaultValue="doctor" className="w-full" onValueChange={(value) => setActiveTab(value as UserRole)}>
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="doctor">Doctor</TabsTrigger>
-            <TabsTrigger value="admin">Admin</TabsTrigger>
-          </TabsList>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>{activeTab === "doctor" ? "Doctor Login" : "Admin Login"}</CardTitle>
-              <CardDescription>
-                Enter your credentials to access your account
-              </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <Card className="w-[350px]">
+        <CardHeader>
+          <CardTitle className="text-2xl text-center">Patient Flow Optimiser</CardTitle>
+          <CardDescription className="text-center">
+            {isSignUp ? "Create a new account" : "Sign in to your account"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={isSignUp ? "signup" : "login"} onValueChange={(value) => setIsSignUp(value === "signup")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login">
+              <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
+                    placeholder="Email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={activeTab === "doctor" ? "doctor@example.com" : "admin@example.com"}
-                    required
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect="off"
+                    {...loginForm.register("email", { required: "Email is required" })}
                   />
+                  {loginForm.formState.errors.email && (
+                    <p className="text-sm text-red-500">{loginForm.formState.errors.email.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
                   <Input
                     id="password"
+                    placeholder="Password"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="password123"
-                    required
+                    autoComplete="current-password"
+                    {...loginForm.register("password", { required: "Password is required" })}
                   />
+                  {loginForm.formState.errors.password && (
+                    <p className="text-sm text-red-500">{loginForm.formState.errors.password.message}</p>
+                  )}
                 </div>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-medical-teal hover:bg-teal-600"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Logging in..." : "Login"}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </Tabs>
-        
-        <div className="mt-4 text-center text-sm text-gray-600">
-          <p>Demo credentials:</p>
-          <p>Doctor: doctor@example.com / password123</p>
-          <p>Admin: admin@example.com / password123</p>
-        </div>
-      </div>
+              </form>
+            </TabsContent>
+            <TabsContent value="signup">
+              <form onSubmit={signupForm.handleSubmit(handleSignupSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                  <Input
+                    id="name"
+                    placeholder="Name"
+                    autoComplete="name"
+                    {...signupForm.register("name", { required: "Name is required" })}
+                  />
+                  {signupForm.formState.errors.name && (
+                    <p className="text-sm text-red-500">{signupForm.formState.errors.name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    id="email"
+                    placeholder="Email"
+                    type="email"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect="off"
+                    {...signupForm.register("email", { required: "Email is required" })}
+                  />
+                  {signupForm.formState.errors.email && (
+                    <p className="text-sm text-red-500">{signupForm.formState.errors.email.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    id="password"
+                    placeholder="Password"
+                    type="password"
+                    autoComplete="new-password"
+                    {...signupForm.register("password", { 
+                      required: "Password is required",
+                      minLength: { value: 6, message: "Password must be at least 6 characters" }
+                    })}
+                  />
+                  {signupForm.formState.errors.password && (
+                    <p className="text-sm text-red-500">{signupForm.formState.errors.password.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    id="confirmPassword"
+                    placeholder="Confirm Password"
+                    type="password"
+                    autoComplete="new-password"
+                    {...signupForm.register("confirmPassword", { 
+                      required: "Please confirm your password",
+                      validate: (value) => value === signupForm.watch("password") || "Passwords do not match"
+                    })}
+                  />
+                  {signupForm.formState.errors.confirmPassword && (
+                    <p className="text-sm text-red-500">{signupForm.formState.errors.confirmPassword.message}</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Creating account..." : "Create Account"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <div className="text-xs text-gray-500 text-center">
+            For testing, please login with admin@example.com / password123
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

@@ -1,249 +1,278 @@
 
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { patients, followUps } from "@/data/mockData";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, UserCheck, PhoneCall, MessageSquare } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import PatientStatusChart from "@/components/analytics/PatientStatusChart";
-import FollowUpTrendChart from "@/components/analytics/FollowUpTrendChart";
-import ConversionRateChart from "@/components/analytics/ConversionRateChart";
-import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface DashboardStats {
+  totalPatients: number;
+  pendingPatients: number;
+  contactedPatients: number;
+  interestedPatients: number;
+  notInterestedPatients: number;
+  coldLeads: number;
+  totalFollowUps: number;
+  pendingFollowUps: number;
+}
 
 const DashboardPage = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
-  const isAdmin = user?.role === "admin";
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalPatients: 0,
+    pendingPatients: 0,
+    contactedPatients: 0,
+    interestedPatients: 0,
+    notInterestedPatients: 0,
+    coldLeads: 0,
+    totalFollowUps: 0,
+    pendingFollowUps: 0,
+  });
 
-  // Filter patients based on user role
-  const filteredPatients = useMemo(() => {
-    return isAdmin
-      ? patients
-      : patients.filter((patient) => patient.doctorId === user?.id);
-  }, [isAdmin, user?.id]);
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#EC7063'];
 
-  // Count patients by status
-  const patientStatusCounts = useMemo(() => {
-    return [
-      { status: "pending", count: filteredPatients.filter((p) => p.status === "pending").length },
-      { status: "contacted", count: filteredPatients.filter((p) => p.status === "contacted").length },
-      { status: "interested", count: filteredPatients.filter((p) => p.status === "interested").length },
-      { status: "booked", count: filteredPatients.filter((p) => p.status === "booked").length },
-      { status: "cold", count: filteredPatients.filter((p) => p.status === "cold").length },
-      { status: "opt-out", count: filteredPatients.filter((p) => p.status === "opt-out").length }
-    ];
-  }, [filteredPatients]);
-
-  // Count follow-ups by type
-  const followUpCounts = useMemo(() => {
-    return {
-      call: followUps.filter((f) => f.type === "call").length,
-      message: followUps.filter((f) => f.type === "message").length,
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoading(true);
+      try {
+        // Get patient counts by status
+        let query = supabase.from('patients').select('status', { count: 'exact' });
+        
+        // Filter by doctor if not admin
+        if (user?.role !== "admin") {
+          query = query.eq('doctor_id', user?.id);
+        }
+        
+        const { count: totalPatients } = await query;
+        
+        // Get pending patients
+        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Pending');
+        if (user?.role !== "admin") {
+          query = query.eq('doctor_id', user?.id);
+        }
+        const { count: pendingPatients } = await query;
+        
+        // Get contacted patients
+        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Contacted');
+        if (user?.role !== "admin") {
+          query = query.eq('doctor_id', user?.id);
+        }
+        const { count: contactedPatients } = await query;
+        
+        // Get interested patients
+        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Interested');
+        if (user?.role !== "admin") {
+          query = query.eq('doctor_id', user?.id);
+        }
+        const { count: interestedPatients } = await query;
+        
+        // Get not interested patients
+        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Not Interested');
+        if (user?.role !== "admin") {
+          query = query.eq('doctor_id', user?.id);
+        }
+        const { count: notInterestedPatients } = await query;
+        
+        // Get cold leads
+        query = supabase.from('patients').select('id', { count: 'exact' }).eq('status', 'Cold');
+        if (user?.role !== "admin") {
+          query = query.eq('doctor_id', user?.id);
+        }
+        const { count: coldLeads } = await query;
+        
+        // Get follow-ups stats
+        let followUpsQuery = supabase.from('follow_ups').select('id', { count: 'exact' });
+        if (user?.role !== "admin") {
+          followUpsQuery = followUpsQuery.eq('created_by', user?.id);
+        }
+        const { count: totalFollowUps } = await followUpsQuery;
+        
+        // Get pending follow-ups (using next_interaction)
+        const now = new Date().toISOString();
+        query = supabase.from('patients')
+          .select('id', { count: 'exact' })
+          .not('next_interaction', 'is', null)
+          .lt('next_interaction', now);
+          
+        if (user?.role !== "admin") {
+          query = query.eq('doctor_id', user?.id);
+        }
+        const { count: pendingFollowUps } = await query;
+        
+        setStats({
+          totalPatients: totalPatients || 0,
+          pendingPatients: pendingPatients || 0,
+          contactedPatients: contactedPatients || 0,
+          interestedPatients: interestedPatients || 0,
+          notInterestedPatients: notInterestedPatients || 0,
+          coldLeads: coldLeads || 0,
+          totalFollowUps: totalFollowUps || 0,
+          pendingFollowUps: pendingFollowUps || 0,
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        toast({
+          variant: "destructive",
+          title: "Failed to load dashboard data",
+          description: "Please try refreshing the page.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
-  }, []);
 
-  // Create data for follow-up trend chart
-  const followUpTrendData = useMemo(() => {
-    // In a real app, this would be coming from an API with actual dates
-    return [
-      { date: "Jan 01", calls: 12, messages: 8, responses: 15 },
-      { date: "Jan 08", calls: 19, messages: 10, responses: 18 },
-      { date: "Jan 15", calls: 15, messages: 12, responses: 20 },
-      { date: "Jan 22", calls: 22, messages: 16, responses: 24 },
-      { date: "Jan 29", calls: 28, messages: 20, responses: 32 },
-      { date: "Feb 05", calls: 24, messages: 22, responses: 30 }
-    ];
-  }, []);
+    fetchStats();
+  }, [user]);
 
-  // Create data for conversion rate chart
-  const conversionData = useMemo(() => {
-    // In a real app, this would be coming from an API with actual data
-    return [
-      { doctor: "Dr. Smith", contacted: 45, interested: 30, booked: 20 },
-      { doctor: "Dr. Johnson", contacted: 35, interested: 25, booked: 18 },
-      { doctor: "Dr. Garcia", contacted: 50, interested: 35, booked: 28 },
-      { doctor: "Dr. Lee", contacted: 40, interested: 28, booked: 22 }
-    ];
-  }, []);
+  const patientStatusData = [
+    { name: 'Pending', value: stats.pendingPatients },
+    { name: 'Contacted', value: stats.contactedPatients },
+    { name: 'Interested', value: stats.interestedPatients },
+    { name: 'Not Interested', value: stats.notInterestedPatients },
+    { name: 'Cold', value: stats.coldLeads },
+  ];
 
-  // Get recent follow-ups
-  const recentFollowUps = useMemo(() => {
-    return [...followUps]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-  }, []);
+  const followUpData = [
+    { name: 'Total Follow-ups', value: stats.totalFollowUps },
+    { name: 'Pending Follow-ups', value: stats.pendingFollowUps },
+  ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t("dashboard")}</h1>
-        <div className="text-sm text-gray-500">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">Dashboard</h1>
+      <p className="text-muted-foreground">
+        Welcome {user?.name}! Here's an overview of your patient follow-up statistics.
+      </p>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="w-12 h-12 border-t-4 border-medical-teal border-solid rounded-full animate-spin"></div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalPatients}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Interested</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.interestedPatients}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Not Interested</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.notInterestedPatients}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Cold Leads</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.coldLeads}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Follow-ups</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalFollowUps}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Pending Follow-ups</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.pendingFollowUps}</div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="hover-scale">
-          <CardContent className="p-6 flex items-center">
-            <div className="bg-blue-100 p-3 rounded-full mr-4">
-              <Users className="h-6 w-6 text-blue-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t("totalPatients")}</p>
-              <h3 className="text-2xl font-bold">{filteredPatients.length}</h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-scale">
-          <CardContent className="p-6 flex items-center">
-            <div className="bg-green-100 p-3 rounded-full mr-4">
-              <UserCheck className="h-6 w-6 text-green-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                {t("bookedAppointments")}
-              </p>
-              <h3 className="text-2xl font-bold">
-                {patientStatusCounts.find(s => s.status === "booked")?.count || 0}
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-scale">
-          <CardContent className="p-6 flex items-center">
-            <div className="bg-yellow-100 p-3 rounded-full mr-4">
-              <PhoneCall className="h-6 w-6 text-yellow-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t("callFollowUps")}</p>
-              <h3 className="text-2xl font-bold">{followUpCounts.call}</h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-scale">
-          <CardContent className="p-6 flex items-center">
-            <div className="bg-purple-100 p-3 rounded-full mr-4">
-              <MessageSquare className="h-6 w-6 text-purple-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                {t("messageFollowUps")}
-              </p>
-              <h3 className="text-2xl font-bold">{followUpCounts.message}</h3>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Patient Status Chart */}
-        <PatientStatusChart 
-          data={patientStatusCounts} 
-          title={t("patientStatus")} 
-          className="lg:col-span-1 hover-scale"
-        />
-        
-        {/* Follow-up Trend Chart */}
-        <FollowUpTrendChart 
-          data={followUpTrendData} 
-          title={t("followUpTrends")} 
-          description="Last 6 weeks" 
-          className="lg:col-span-2 hover-scale"
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        {/* Conversion Rate Chart */}
-        {isAdmin && (
-          <ConversionRateChart 
-            data={conversionData} 
-            title="Doctor Performance" 
-            description="Conversion rates by doctor" 
-            className="lg:col-span-2 hover-scale"
-          />
-        )}
-
-        {/* Recent Follow-ups */}
-        <Card className={`${isAdmin ? 'lg:col-span-1' : 'lg:col-span-3'} hover-scale`}>
-          <CardHeader>
-            <CardTitle className="text-xl">{t("recentFollowUps")}</CardTitle>
-            <CardDescription>
-              {t("latestCommunications")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentFollowUps.map((followUp) => {
-                const patient = patients.find(
-                  (p) => p.id === followUp.patientId
-                );
-                return (
-                  <div
-                    key={followUp.id}
-                    className="flex items-start p-3 border rounded-lg bg-gray-50 hover:shadow-md transition-shadow duration-200"
-                  >
-                    <div
-                      className={`p-2 rounded-full mr-3 ${
-                        followUp.type === "call"
-                          ? "bg-yellow-100"
-                          : "bg-purple-100"
-                      }`}
-                    >
-                      {followUp.type === "call" ? (
-                        <PhoneCall
-                          className="h-4 w-4 text-yellow-700"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <MessageSquare
-                          className="h-4 w-4 text-purple-700"
-                          aria-hidden="true"
-                        />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate story-link">
-                        {patient?.name}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {followUp.date} at {followUp.time}
-                      </p>
-                      {followUp.notes && (
-                        <p className="text-xs text-gray-600 mt-1 truncate">
-                          {followUp.notes}
-                        </p>
-                      )}
-                    </div>
-                    {followUp.response && (
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full ${
-                          followUp.response === "yes"
-                            ? "bg-green-100 text-green-800"
-                            : followUp.response === "no"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
-                      >
-                        {followUp.response === "call_again"
-                          ? t("callAgain")
-                          : t(followUp.response)}
-                      </span>
-                    )}
+          <Tabs defaultValue="patient-status">
+            <TabsList>
+              <TabsTrigger value="patient-status">Patient Status</TabsTrigger>
+              <TabsTrigger value="follow-ups">Follow-up Analytics</TabsTrigger>
+            </TabsList>
+            <TabsContent value="patient-status">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Patient Status Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={patientStatusData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {patientStatusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [`${value} patients`, 'Count']} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="follow-ups">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Follow-up Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={followUpData}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="value" name="Count" fill="#8884d8" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   );
 };
