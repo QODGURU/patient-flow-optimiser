@@ -1,10 +1,11 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
-// Define valid table names as a literal type
+// Define valid table names as a union type instead of a literal type
 type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings' | 'api_configurations';
 
 export function useSupabaseQuery<T>(
@@ -134,7 +135,7 @@ export function useMutateSupabase() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const insert = async <T extends { id?: string }>(tableName: TableName, data: T) => {
+  const insert = async <T>(tableName: TableName, data: T) => {
     setLoading(true);
     setError(null);
 

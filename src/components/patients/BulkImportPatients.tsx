@@ -93,7 +93,7 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
               }
               
               // Map spreadsheet columns to database fields
-              const patientData: Patient = {
+              const patientData: Partial<Patient> = {
                 name: record['Patient Name'] || record['Name'],
                 age: record['Age'] ? Number(record['Age']) : null,
                 gender: record['Gender'],
@@ -115,7 +115,7 @@ export const BulkImportPatients: React.FC<BulkImportPatientsProps> = ({
               };
               
               console.log("Inserting patient data:", patientData);
-              await insert<Patient>("patients", patientData);
+              await insert<Patient>("patients", patientData as Patient);
               successCount++;
               
               // Update counts as we progress

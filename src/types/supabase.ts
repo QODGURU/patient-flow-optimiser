@@ -51,6 +51,7 @@ export type Patient = {
   last_modified_by?: string;
   script?: string;
   cold_reason?: string;
+  patient_feedback?: string; // Add this missing field
   // VoIP fields
   voip_call_id?: string | null;
   voip_call_status?: string | null;
