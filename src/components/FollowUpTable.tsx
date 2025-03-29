@@ -32,6 +32,7 @@ export interface FollowUpTableProps {
 export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit = 10 }) => {
   const navigate = useNavigate();
   const [mergedFollowUps, setMergedFollowUps] = useState<MergedFollowUp[]>([]);
+  const [isLoadingDemoData, setIsLoadingDemoData] = useState(true);
   
   // Get follow-ups from Supabase
   const { data: followUps, loading: followUpsLoading, refetch: refetchFollowUps } = 
@@ -55,6 +56,7 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
   
   // Check for demo data first
   useEffect(() => {
+    setIsLoadingDemoData(true);
     const demoFollowUps = localStorage.getItem('demo_follow_ups');
     const demoPatients = localStorage.getItem('demo_patients');
     
@@ -63,11 +65,15 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
         const parsedFollowUps = JSON.parse(demoFollowUps);
         const parsedPatients = JSON.parse(demoPatients);
         
+        console.log(`Looking for follow-ups ${patientId ? `for patient ${patientId}` : 'for all patients'}`);
+        console.log(`Available patients in demo data:`, parsedPatients.map((p: Patient) => `${p.id} (${typeof p.id})`));
+        console.log(`Available follow-ups in demo data:`, parsedFollowUps.map((f: FollowUp) => `${f.id} (patient: ${f.patient_id})`));
+        
         let filteredFollowUps;
         
         if (patientId) {
-          // Filter for specific patient
-          filteredFollowUps = parsedFollowUps.filter((f: FollowUp) => f.patient_id === patientId);
+          // Filter for specific patient - ensure string comparison
+          filteredFollowUps = parsedFollowUps.filter((f: FollowUp) => String(f.patient_id) === String(patientId));
           console.log(`Found ${filteredFollowUps.length} follow-ups in demo data for patient ${patientId}`);
         } else {
           // Get all follow-ups
@@ -78,7 +84,8 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
         if (filteredFollowUps.length > 0 || patientId) {
           // Merge data
           const merged = filteredFollowUps.map((followUp: FollowUp) => {
-            const patient = parsedPatients.find((p: Patient) => p.id === followUp.patient_id);
+            // Ensure string comparison when finding the patient
+            const patient = parsedPatients.find((p: Patient) => String(p.id) === String(followUp.patient_id));
             return {
               ...followUp,
               patientName: patient?.name || 'Unknown Patient',
@@ -90,12 +97,15 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
           // Apply limit if needed and not specific to a patient
           const limitedFollowUps = !patientId && limit ? merged.slice(0, limit) : merged;
           setMergedFollowUps(limitedFollowUps);
+          setIsLoadingDemoData(false);
           return; // Exit early as we have demo data
         }
       } catch (error) {
         console.error("Error parsing demo data:", error);
       }
     }
+    
+    setIsLoadingDemoData(false);
     
     // If no demo data or error parsing, continue to use Supabase data
     if (followUps.length > 0) {
@@ -141,7 +151,7 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
         )}
       </CardHeader>
       <CardContent>
-        {followUpsLoading && mergedFollowUps.length === 0 ? (
+        {(followUpsLoading || isLoadingDemoData) && mergedFollowUps.length === 0 ? (
           <div className="text-center py-4">Loading follow-ups...</div>
         ) : mergedFollowUps.length === 0 ? (
           <div className="text-center py-4 text-gray-500">

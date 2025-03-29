@@ -70,9 +70,11 @@ const PatientDetailsPage = () => {
       if (demoPatients) {
         try {
           const parsedPatients = JSON.parse(demoPatients);
-          // Convert patientId to string to ensure proper comparison
+          console.log("Available patient IDs in demo data:", parsedPatients.map((p: Patient) => `${p.id} (${typeof p.id})`));
+          
+          // Ensure we're comparing strings to strings
           const patient = parsedPatients.find((p: Patient) => 
-            p.id.toString() === patientId.toString()
+            String(p.id) === String(patientId)
           );
           
           if (patient) {
@@ -90,8 +92,6 @@ const PatientDetailsPage = () => {
             console.error("Patient not found in demo data for ID:", patientId);
             setPatientNotFound(true);
             setIsLoading(false);
-            // Debugging: Log all patient IDs to check format
-            console.log("Available patient IDs:", parsedPatients.map((p: Patient) => p.id));
           }
         } catch (error) {
           console.error("Error parsing demo patients:", error);
@@ -105,6 +105,7 @@ const PatientDetailsPage = () => {
     }
   }, [patientId]);
 
+  // Load data from Supabase if no manual data
   const { data: patient, loading: patientLoading } = useSupabaseQuery<Patient>(
     "patients",
     {
