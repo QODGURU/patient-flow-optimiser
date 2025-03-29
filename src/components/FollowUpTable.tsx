@@ -75,7 +75,7 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
           console.log(`Found ${filteredFollowUps.length} total follow-ups in demo data`);
         }
         
-        if (filteredFollowUps.length > 0) {
+        if (filteredFollowUps.length > 0 || patientId) {
           // Merge data
           const merged = filteredFollowUps.map((followUp: FollowUp) => {
             const patient = parsedPatients.find((p: Patient) => p.id === followUp.patient_id);

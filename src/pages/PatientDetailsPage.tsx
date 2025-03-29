@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,17 +55,25 @@ const PatientDetailsPage = () => {
   const [nextInteraction, setNextInteraction] = useState<Date | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [manualPatientData, setManualPatientData] = useState<Patient | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [patientNotFound, setPatientNotFound] = useState(false);
 
   // Check if we have demo data
   useEffect(() => {
+    setIsLoading(true);
+    setPatientNotFound(false);
+    
     if (patientId) {
+      console.log("Looking for patient with ID:", patientId);
       const demoPatients = localStorage.getItem("demo_patients");
+      
       if (demoPatients) {
         try {
           const parsedPatients = JSON.parse(demoPatients);
-          // Make sure to convert patientId string to the same type as the id in the parsed data
-          // Some implementations might store IDs as numbers in localStorage but as strings in URLs
-          const patient = parsedPatients.find((p: Patient) => p.id === patientId);
+          // Convert patientId to string to ensure proper comparison
+          const patient = parsedPatients.find((p: Patient) => 
+            p.id.toString() === patientId.toString()
+          );
           
           if (patient) {
             console.log("Found patient in demo data:", patient);
@@ -76,14 +85,22 @@ const PatientDetailsPage = () => {
             setEmail(patient.email || '');
             setNotes(patient.notes || '');
             setNextInteraction(patient.next_interaction ? new Date(patient.next_interaction) : undefined);
+            setIsLoading(false);
           } else {
             console.error("Patient not found in demo data for ID:", patientId);
+            setPatientNotFound(true);
+            setIsLoading(false);
             // Debugging: Log all patient IDs to check format
             console.log("Available patient IDs:", parsedPatients.map((p: Patient) => p.id));
           }
         } catch (error) {
           console.error("Error parsing demo patients:", error);
+          setIsLoading(false);
+          setPatientNotFound(true);
         }
+      } else {
+        // No demo data exists, will rely on Supabase query
+        console.log("No demo data found, checking Supabase");
       }
     }
   }, [patientId]);
@@ -96,21 +113,28 @@ const PatientDetailsPage = () => {
     }
   );
 
+  useEffect(() => {
+    if (patientLoading === false && !manualPatientData) {
+      if (patient && patient.length > 0) {
+        setName(patient[0].name || '');
+        setPhone(patient[0].phone || '');
+        setEmail(patient[0].email || '');
+        setNotes(patient[0].notes || '');
+        setNextInteraction(patient[0].next_interaction ? new Date(patient[0].next_interaction) : undefined);
+        setIsLoading(false);
+      } else {
+        console.log("No patient found in Supabase");
+        setPatientNotFound(true);
+        setIsLoading(false);
+      }
+    }
+  }, [patient, patientLoading, manualPatientData]);
+
   const { data: doctors } = useSupabaseQuery<Profile>("profiles", {
     filters: { role: "doctor" },
   });
 
   const { update, remove, loading: mutationLoading } = useMutateSupabase();
-
-  useEffect(() => {
-    if (patient && patient.length > 0 && !manualPatientData) {
-      setName(patient[0].name || '');
-      setPhone(patient[0].phone || '');
-      setEmail(patient[0].email || '');
-      setNotes(patient[0].notes || '');
-      setNextInteraction(patient[0].next_interaction ? new Date(patient[0].next_interaction) : undefined);
-    }
-  }, [patient, manualPatientData]);
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -143,7 +167,7 @@ const PatientDetailsPage = () => {
         if (demoPatients) {
           const parsedPatients = JSON.parse(demoPatients);
           const updatedPatients = parsedPatients.map((p: Patient) => {
-            if (p.id === patientId) {
+            if (p.id.toString() === patientId.toString()) {
               return {
                 ...p,
                 name,
@@ -196,7 +220,9 @@ const PatientDetailsPage = () => {
         const demoPatients = localStorage.getItem("demo_patients");
         if (demoPatients) {
           const parsedPatients = JSON.parse(demoPatients);
-          const updatedPatients = parsedPatients.filter((p: Patient) => p.id !== patientId);
+          const updatedPatients = parsedPatients.filter((p: Patient) => 
+            p.id.toString() !== patientId.toString()
+          );
           
           // Update localStorage
           localStorage.setItem("demo_patients", JSON.stringify(updatedPatients));
@@ -205,7 +231,9 @@ const PatientDetailsPage = () => {
           const demoFollowUps = localStorage.getItem("demo_follow_ups");
           if (demoFollowUps) {
             const parsedFollowUps = JSON.parse(demoFollowUps);
-            const updatedFollowUps = parsedFollowUps.filter((f: FollowUp) => f.patient_id !== patientId);
+            const updatedFollowUps = parsedFollowUps.filter((f: FollowUp) => 
+              f.patient_id.toString() !== patientId.toString()
+            );
             localStorage.setItem("demo_follow_ups", JSON.stringify(updatedFollowUps));
           }
           
@@ -226,12 +254,12 @@ const PatientDetailsPage = () => {
     }
   };
 
-  if (patientLoading && !manualPatientData) {
+  if (isLoading) {
     return <div className="p-8 text-center">Loading patient details...</div>;
   }
 
-  // If we don't have a patient object either from Supabase or demo data
-  if (!manualPatientData && (!patient || patient.length === 0)) {
+  // If patient not found, show error
+  if (patientNotFound) {
     return (
       <div className="p-8">
         <div className="mb-6">
