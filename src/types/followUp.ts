@@ -8,7 +8,7 @@ export interface MergedFollowUp {
   date: string;
   time: string;
   notes?: string;
-  response: string | null;
+  response?: string | null;
   // Support both naming conventions
   patient_id?: string;
   patientId?: string;

@@ -1,9 +1,9 @@
 
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import ConversionRateChart from "./ConversionRateChart";
-import FollowUpTrendChart from "./FollowUpTrendChart";
 import PatientStatusChart from "./PatientStatusChart";
+import FollowUpTrendChart from "./FollowUpTrendChart";
+import ConversionRateChart from "./ConversionRateChart";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 
@@ -34,6 +34,44 @@ export interface ConversionData {
 export const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartTypes = ["all"] }) => {
   const { t } = useLanguage();
   const [timeRange, setTimeRange] = useState("month");
+
+  // Sample data for patient status
+  const patientStatusData = [
+    { status: "Interested", count: 37 },
+    { status: "Not Interested", count: 24 },
+    { status: "Pending", count: 45 },
+    { status: "Contacted", count: 28 },
+    { status: "Booked", count: 19 }
+  ];
+
+  // Sample data for conversion rate
+  const conversionRateData = [
+    { doctor: "Dr. Smith", contacted: 48, interested: 22, booked: 15 },
+    { doctor: "Dr. Johnson", contacted: 52, interested: 19, booked: 12 },
+    { doctor: "Dr. Williams", contacted: 38, interested: 24, booked: 18 },
+    { doctor: "Dr. Brown", contacted: 45, interested: 20, booked: 14 }
+  ];
+
+  // Sample data for follow-up trend
+  const followUpTrendData = (() => {
+    const today = new Date();
+    const data = [];
+    
+    for (let i = 0; i < 6; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      data.unshift({
+        date: dateStr,
+        calls: Math.floor(Math.random() * 8) + 3,
+        messages: Math.floor(Math.random() * 10) + 5,
+        responses: Math.floor(Math.random() * 7) + 2
+      });
+    }
+    
+    return data;
+  })();
 
   // Sample data for other charts
   const treatmentCategoriesData = [
@@ -138,7 +176,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartTypes = [
         <Card className="col-span-1">
           <CardContent className="p-4">
             <h3 className="text-lg font-medium mb-4">{t("patientStatusDistribution")}</h3>
-            <PatientStatusChart />
+            <PatientStatusChart data={patientStatusData} />
           </CardContent>
         </Card>
       )}
@@ -147,7 +185,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartTypes = [
         <Card className="col-span-1">
           <CardContent className="p-4">
             <h3 className="text-lg font-medium mb-4">{t("conversionRateByDoctor")}</h3>
-            <ConversionRateChart />
+            <ConversionRateChart data={conversionRateData} />
           </CardContent>
         </Card>
       )}
@@ -156,7 +194,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartTypes = [
         <Card className="col-span-2">
           <CardContent className="p-4">
             <h3 className="text-lg font-medium mb-4">{t("followUpTrend")}</h3>
-            <FollowUpTrendChart />
+            <FollowUpTrendChart data={followUpTrendData} />
           </CardContent>
         </Card>
       )}
