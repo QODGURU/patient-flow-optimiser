@@ -26,6 +26,7 @@ import { useSupabaseQuery, useMutateSupabase } from "@/hooks/useSupabase";
 import { Patient } from "@/types/supabase";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DemoDataButton } from "@/components/DemoDataButton";
 
 const ColdLeadsPage = () => {
   const { profile } = useAuth();
@@ -97,10 +98,13 @@ const ColdLeadsPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Cold Leads</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-gray-500" />
-          <span className="text-sm text-gray-500">
-            Last updated: {new Date().toLocaleDateString()}
-          </span>
+          <DemoDataButton />
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-gray-500" />
+            <span className="text-sm text-gray-500">
+              Last updated: {new Date().toLocaleDateString()}
+            </span>
+          </div>
         </div>
       </div>
 

@@ -7,43 +7,48 @@ import { DashboardData } from "@/components/analytics/DashboardData";
 import { DashboardCharts } from "@/components/analytics/DashboardCharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { generateDemoData } from "@/utils/demoDataGenerator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { DemoDataButton } from "@/components/DemoDataButton";
 
-const DashboardPage = () => {
-  const [isGenerating, setIsGenerating] = useState(false);
+const StatCard = ({ title, value, loading, icon, iconBgColor }: any) => (
+  <Card>
+    <CardContent className="p-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm text-gray-500">{title}</p>
+          {loading ? (
+            <Skeleton className="h-8 w-24 mt-1" />
+          ) : (
+            <p className="text-2xl font-semibold mt-1">{value}</p>
+          )}
+        </div>
+        <div className={`p-2 rounded-full ${iconBgColor}`}>
+          {icon}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
-  const handleGenerateData = async () => {
-    setIsGenerating(true);
-    try {
-      await generateDemoData();
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+export default function DashboardPage() {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
+  const { t } = useLanguage();
+  const [dateRange, setDateRange] = useState<"week" | "month" | "year">("month");
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-[#101B4C]">Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleGenerateData}
-            disabled={isGenerating}
-            className="flex items-center gap-2"
-          >
-            <Database className="h-4 w-4" />
-            {isGenerating ? "Generating..." : "Generate Demo Data"}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">
+          {t("overview")}
+        </h1>
+        <div className="flex items-center gap-3">
+          <DemoDataButton />
+          <Button variant="outline" size="sm" className="flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            {t("today")}
           </Button>
-          <div className="text-sm text-[#2B2E33]">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </div>
         </div>
       </div>
 
@@ -59,153 +64,88 @@ const DashboardPage = () => {
                 icon={<Users className="h-6 w-6 text-[#101B4C]" />}
                 iconBgColor="bg-[#101B4C]/10"
               />
-
+              <StatCard
+                title="Calls Made"
+                value={followUpCounts.call || 0}
+                loading={followUpsLoading}
+                icon={<PhoneCall className="h-6 w-6 text-green-600" />}
+                iconBgColor="bg-green-100"
+              />
+              <StatCard
+                title="Messages Sent"
+                value={followUpCounts.message || 0}
+                loading={followUpsLoading}
+                icon={<MessageSquare className="h-6 w-6 text-blue-600" />}
+                iconBgColor="bg-blue-100"
+              />
               <StatCard
                 title="Interested"
-                value={followUpCounts.interested}
+                value={followUpCounts.interested || 0}
                 loading={patientsLoading}
-                icon={<Star className="h-6 w-6 text-[#00FFC8]" />}
-                iconBgColor="bg-[#00FFC8]/10"
+                icon={<Star className="h-6 w-6 text-amber-500" />}
+                iconBgColor="bg-amber-100"
               />
-
               <StatCard
-                title="Not Interested"
-                value={followUpCounts.notInterested}
+                title="Pending"
+                value={followUpCounts.pending || 0}
                 loading={patientsLoading}
-                icon={<AlertTriangle className="h-6 w-6 text-[#FF3B3B]" />}
-                iconBgColor="bg-[#FF3B3B]/10"
-              />
-
-              <StatCard
-                title="Total Follow-ups"
-                value={followUpCounts.total}
-                loading={followUpsLoading}
-                icon={<PhoneCall className="h-6 w-6 text-[#FFC107]" />}
-                iconBgColor="bg-[#FFC107]/10"
-              />
-
-              <StatCard
-                title="Pending Follow-ups"
-                value={followUpCounts.pending}
-                loading={patientsLoading}
-                icon={<Calendar className="h-6 w-6 text-[#8066DC]" />}
-                iconBgColor="bg-[#8066DC]/10"
+                icon={<AlertTriangle className="h-6 w-6 text-amber-500" />}
+                iconBgColor="bg-amber-100"
               />
             </div>
 
-            {/* Charts */}
-            <DashboardCharts />
-            
-            {/* Recent Follow-ups */}
-            <div className="mt-6">
-              <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-bold text-[#101B4C] mb-4">Recent Follow-ups</h3>
-                  
-                  {followUpsLoading ? (
-                    <div className="space-y-4">
-                      {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-20 w-full" />
-                      ))}
-                    </div>
-                  ) : recentFollowUps.length > 0 ? (
-                    <div className="space-y-4">
-                      {recentFollowUps.map((followUp) => (
-                        <div
-                          key={followUp.id}
-                          className="flex items-start p-3 border rounded-lg bg-gray-50 hover:shadow-md transition-shadow duration-200"
-                        >
-                          <div
-                            className={`p-2 rounded-full mr-3 ${
-                              followUp.type.toLowerCase().includes('call')
-                                ? "bg-[#FFC107]/10"
-                                : "bg-[#00FFC8]/10"
-                            }`}
-                          >
-                            {followUp.type.toLowerCase().includes('call') ? (
-                              <PhoneCall
-                                className="h-4 w-4 text-[#FFC107]"
-                                aria-hidden="true"
-                              />
-                            ) : (
-                              <MessageSquare
-                                className="h-4 w-4 text-[#00FFC8]"
-                                aria-hidden="true"
-                              />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#101B4C] truncate">
-                              {followUp.patientName}
-                            </p>
-                            <p className="text-xs text-[#2B2E33] mt-1">
-                              {followUp.date} at {followUp.time}
-                            </p>
-                            {followUp.notes && (
-                              <p className="text-xs text-[#2B2E33] mt-1 truncate">
-                                {followUp.notes}
-                              </p>
-                            )}
-                          </div>
-                          {followUp.response && (
-                            <span
-                              className={`text-xs px-2 py-1 rounded-full ${
-                                followUp.response === "Yes"
-                                  ? "bg-green-100 text-green-800"
-                                  : followUp.response === "No"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-blue-100 text-blue-800"
-                              }`}
-                            >
-                              {followUp.response === "call_again"
-                                ? "Call Again"
-                                : followUp.response}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 text-[#2B2E33]">
-                      No recent follow-ups available
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            {/* Chart Tabs */}
+            <Tabs defaultValue="performance" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <TabsList>
+                  <TabsTrigger value="performance">Performance</TabsTrigger>
+                  <TabsTrigger value="patients">Patients</TabsTrigger>
+                  <TabsTrigger value="interactions">Interactions</TabsTrigger>
+                </TabsList>
+                
+                <div className="flex space-x-1 bg-gray-100 p-1 rounded-md">
+                  <Button
+                    size="sm"
+                    variant={dateRange === "week" ? "default" : "ghost"}
+                    className={dateRange === "week" ? "" : "bg-transparent text-gray-500"}
+                    onClick={() => setDateRange("week")}
+                  >
+                    Week
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={dateRange === "month" ? "default" : "ghost"}
+                    className={dateRange === "month" ? "" : "bg-transparent text-gray-500"}
+                    onClick={() => setDateRange("month")}
+                  >
+                    Month
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={dateRange === "year" ? "default" : "ghost"}
+                    className={dateRange === "year" ? "" : "bg-transparent text-gray-500"}
+                    onClick={() => setDateRange("year")}
+                  >
+                    Year
+                  </Button>
+                </div>
+              </div>
+              
+              <TabsContent value="performance" className="space-y-4">
+                <DashboardCharts />
+              </TabsContent>
+              
+              <TabsContent value="patients" className="space-y-4">
+                <DashboardCharts chartTypes={["patientStatus", "treatmentCategories", "channelPreferences"]} />
+              </TabsContent>
+              
+              <TabsContent value="interactions" className="space-y-4">
+                <DashboardCharts chartTypes={["followUpTrend", "timePreferences", "interactionOutcomes"]} />
+              </TabsContent>
+            </Tabs>
           </>
         )}
       </DashboardData>
     </div>
   );
-};
-
-interface StatCardProps {
-  title: string;
-  value: number;
-  loading: boolean;
-  icon: React.ReactNode;
-  iconBgColor: string;
 }
-
-const StatCard = ({ title, value, loading, icon, iconBgColor }: StatCardProps) => {
-  return (
-    <Card className="hover:shadow-lg transition-shadow duration-200 border-[#101B4C]/10">
-      <CardContent className="p-6 flex items-center">
-        <div className={`${iconBgColor} p-3 rounded-full mr-4`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm font-medium text-[#2B2E33]">{title}</p>
-          {loading ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <h3 className="text-2xl font-bold text-[#101B4C]">{value}</h3>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default DashboardPage;

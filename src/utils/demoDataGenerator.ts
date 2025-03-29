@@ -32,10 +32,11 @@ const generatePatientData = (doctorId: string, clinicId: string | null) => {
   const firstNames = ["John", "Emma", "Michael", "Sophia", "William", "Olivia", "James", "Ava", "Alexander", "Mia", "Daniel", "Sarah", "Matthew", "Emily", "David", "Abigail", "Joseph", "Elizabeth", "Andrew", "Sofia"];
   const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"];
   
-  const patientStatus = ["Interested", "Not Interested", "Pending", "Contacted", "Booked"];
+  const patientStatus = ["Interested", "Not Interested", "Pending", "Contacted", "Booked", "Cold"];
   const preferredTimes = ["Morning", "Afternoon", "Evening", null];
   const preferredChannels = ["Call", "SMS", "Email", null];
   const genders = ["Male", "Female", "Other", "Prefer not to say"];
+  const coldReasons = ["no-response", "declined", "budget-constraints", "invalid-contact", "opt-out"];
   
   const randomTreatment = treatments[Math.floor(Math.random() * treatments.length)];
   const randomTreatmentType = randomTreatment.types[Math.floor(Math.random() * randomTreatment.types.length)];
@@ -48,8 +49,8 @@ const generatePatientData = (doctorId: string, clinicId: string | null) => {
   const preferredChannel = preferredChannels[Math.floor(Math.random() * preferredChannels.length)];
   const gender = genders[Math.floor(Math.random() * genders.length)];
   
-  // Random price between 100 and 2000
-  const price = Math.floor(Math.random() * 1900) + 100;
+  // Random price between 100 and 5000
+  const price = Math.floor(Math.random() * 4900) + 100;
   
   // Random age between 18 and 75
   const age = Math.floor(Math.random() * 57) + 18;
@@ -97,6 +98,11 @@ const generatePatientData = (doctorId: string, clinicId: string | null) => {
     lastInteractionOutcome = outcomes[Math.floor(Math.random() * outcomes.length)];
   }
   
+  const coldReason = status === "Cold" ? coldReasons[Math.floor(Math.random() * coldReasons.length)] : null;
+  
+  // Generate last interaction date
+  const lastInteractionDate = randomDate(createdAt, now);
+  
   return {
     name: `${firstName} ${lastName}`,
     age,
@@ -110,20 +116,22 @@ const generatePatientData = (doctorId: string, clinicId: string | null) => {
     clinic_id: clinicId,
     follow_up_required: followUpRequired,
     status,
-    preferred_time: preferredTime,
-    preferred_channel: preferredChannel,
+    preferred_time: preferredTime as "Morning" | "Afternoon" | "Evening" | null,
+    preferred_channel: preferredChannel as "Call" | "SMS" | "Email" | null,
     availability_preferences: availabilityPreferences,
     notes,
     created_at: createdAt.toISOString(),
+    last_interaction: lastInteractionDate.toISOString(),
     last_interaction_outcome: lastInteractionOutcome,
-    last_modified_by: doctorId
+    last_modified_by: doctorId,
+    cold_reason: coldReason
   };
 };
 
 // Generate follow-up data for a patient
 const generateFollowUpData = (patientId: string, doctorId: string, patientStatus: string) => {
   const followUpTypes = ["Phone Call", "SMS", "Email"];
-  const responseTypes = ["Yes", "No", "Maybe", "No Answer", "Opt-out", null];
+  const responseTypes = ["Yes", "No", "Maybe", "No Answer", null];
   
   let responses = [...responseTypes];
   
@@ -131,7 +139,7 @@ const generateFollowUpData = (patientId: string, doctorId: string, patientStatus
   if (patientStatus === "Interested") {
     responses = ["Yes", "Maybe", "Yes", "Yes", "No Answer"];
   } else if (patientStatus === "Not Interested") {
-    responses = ["No", "Opt-out", "No", "No Answer"];
+    responses = ["No", "No", "No", "No Answer"];
   }
   
   const now = new Date();
@@ -204,7 +212,7 @@ export const generateDemoData = async () => {
     console.log("Generating demo patient data...");
     toast.info("Generating demo data...");
     
-    // Number of patients to create
+    // Number of patients to create (at least 20)
     const patientCount = 30;
     
     // Create patients
@@ -226,7 +234,7 @@ export const generateDemoData = async () => {
     console.log(`Successfully created ${patientData.length} demo patients`);
     
     // Create follow-ups for each patient
-    let allFollowUps: FollowUp[] = [];
+    let allFollowUps: any[] = [];
     
     patientData.forEach(patient => {
       const followUps = generateFollowUpData(patient.id, profile.id, patient.status);
@@ -254,5 +262,43 @@ export const generateDemoData = async () => {
     console.error("Error generating demo data:", error);
     toast.error("Failed to generate demo data");
     return null;
+  }
+};
+
+// Function to clear all demo data
+export const clearDemoData = async () => {
+  try {
+    toast.info("Clearing demo data...");
+    
+    // Delete all follow-ups first (due to potential foreign key constraints)
+    const { error: followUpError } = await supabase
+      .from("follow_ups")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all records
+      
+    if (followUpError) {
+      throw followUpError;
+    }
+    
+    // Delete all patients
+    const { error: patientError } = await supabase
+      .from("patients")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all records
+      
+    if (patientError) {
+      throw patientError;
+    }
+    
+    toast.success("Demo data cleared successfully!");
+    
+    // Reload the page
+    window.location.reload();
+    
+    return true;
+  } catch (error) {
+    console.error("Error clearing demo data:", error);
+    toast.error("Failed to clear demo data");
+    return false;
   }
 };
