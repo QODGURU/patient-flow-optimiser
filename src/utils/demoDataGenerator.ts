@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentUserProfile } from "@/integrations/supabase/client";
 import { Patient, FollowUp } from "@/types/supabase";
@@ -210,10 +209,10 @@ export const generateDemoData = async () => {
     }
     
     console.log("Generating demo patient data...");
-    toast.info("Generating demo data...");
+    toast.info("Generating 20 demo patients...");
     
-    // Number of patients to create (at least 20)
-    const patientCount = 30;
+    // Number of patients to create (20 as requested)
+    const patientCount = 20;
     
     // Create patients
     const patients = [];
@@ -252,7 +251,7 @@ export const generateDemoData = async () => {
     }
     
     console.log(`Successfully created ${followUpData.length} demo follow-ups`);
-    toast.success("Demo data generated successfully!");
+    toast.success(`Successfully added 20 patients with ${followUpData.length} follow-ups!`);
     
     // Reload the page to see the new data
     window.location.reload();
