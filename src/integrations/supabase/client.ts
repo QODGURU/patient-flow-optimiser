@@ -80,32 +80,34 @@ export const testSupabaseConnection = async () => {
   console.log("Testing Supabase connection...");
   
   try {
-    // Try to ping the Supabase API
+    // Try a simple query instead of a profiles count query which may be affected by RLS
     const startTime = Date.now();
-    const { error } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
+    
+    // First, test basic connectivity with a simple system-level query
+    const { error: pingError } = await supabase
+      .from('clinics')  // Try using clinics table instead which may have less restrictive RLS
+      .select('count', { count: 'exact', head: true })
+      .limit(1);
+    
     const endTime = Date.now();
     const latency = endTime - startTime;
     
-    if (error) {
-      if (error.code === "PGRST116") {
-        // This is a permission error, which actually indicates the connection is working
-        // but the user doesn't have access to the profiles table
-        console.log("✅ Supabase connection successful (permission error, but connection works)");
+    if (pingError) {
+      // Try another table as a fallback
+      const { error: fallbackError } = await supabase
+        .from('settings')
+        .select('count', { count: 'exact', head: true })
+        .limit(1);
+        
+      if (fallbackError) {
+        console.error("❌ Supabase connection failed on backup check:", fallbackError);
         return { 
-          success: true, 
+          success: false, 
           latency,
-          message: "Connected (no table access)",
-          error: null 
+          message: `Error: ${fallbackError.message || fallbackError.code || "Connection error"}`,
+          error: fallbackError 
         };
       }
-      
-      console.error("❌ Supabase connection failed:", error);
-      return { 
-        success: false, 
-        latency,
-        message: `Error: ${error.message || error.code || "Unknown error"}`,
-        error 
-      };
     }
     
     console.log(`✅ Supabase connection successful (latency: ${latency}ms)`);
