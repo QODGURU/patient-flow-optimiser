@@ -10,6 +10,24 @@ import { DemoDataButton } from "@/components/DemoDataButton";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { FollowUp, Patient } from "@/types/supabase";
 
+// Define a merged type that works for both Supabase and mock data
+type MergedFollowUp = {
+  id: string;
+  patientName: string;
+  clinicName: string;
+  doctorId?: string;
+  type: string;
+  date: string;
+  time: string;
+  notes?: string;
+  response: string | null;
+  // For compatibility with both data structures
+  patient_id?: string;
+  patientId?: string;
+  created_by?: string;
+  created_at?: string;
+};
+
 const FollowUpsPage = () => {
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === "admin";
@@ -33,7 +51,7 @@ const FollowUpsPage = () => {
   const useRealData = supabasePatients.length > 0 && supabaseFollowUps.length > 0;
   
   // Merge follow-ups with patient data
-  const mergedFollowUps = useRealData 
+  const mergedFollowUps: MergedFollowUp[] = useRealData 
     ? supabaseFollowUps.map((followUp) => {
         const patient = supabasePatients.find((p) => p.id === followUp.patient_id);
         return {
@@ -55,7 +73,11 @@ const FollowUpsPage = () => {
 
   // Filter follow-ups based on role and filters
   const filteredFollowUps = mergedFollowUps
-    .filter((followUp) => (isAdmin ? true : followUp.doctorId === profile?.id || followUp.created_by === profile?.id))
+    .filter((followUp) => {
+      if (isAdmin) return true;
+      return followUp.doctorId === profile?.id || 
+             (followUp.created_by !== undefined && followUp.created_by === profile?.id);
+    })
     .filter(
       (followUp) => typeFilter === "all" || followUp.type.toLowerCase().includes(typeFilter.toLowerCase())
     )
@@ -101,14 +123,14 @@ const FollowUpsPage = () => {
         
         <TabsContent value="recent">
           <RecentFollowUps 
-            followUps={recentFollowUps} 
+            followUps={recentFollowUps as any} 
             isLoading={patientsLoading || followUpsLoading}
           />
         </TabsContent>
         
         <TabsContent value="pending">
           <PendingFollowUps 
-            followUps={pendingFollowUps}
+            followUps={pendingFollowUps as any}
             isLoading={patientsLoading || followUpsLoading}
           />
         </TabsContent>

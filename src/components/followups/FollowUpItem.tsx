@@ -2,17 +2,28 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Phone, MessageSquare } from "lucide-react";
-import { FollowUp } from "@/types";
 
 interface FollowUpItemProps {
-  followUp: FollowUp & {
+  followUp: {
+    id: string;
     patientName: string;
     clinicName: string;
     doctorId?: string;
+    type: string;
+    date: string;
+    time: string;
+    notes?: string;
+    response: string | null;
+    // For compatibility with both data structures
+    patient_id?: string;
+    patientId?: string;
   };
 }
 
 export const FollowUpItem = ({ followUp }: FollowUpItemProps) => {
+  // Determine which ID to use for patient routing
+  const patientRouteId = followUp.patientId || followUp.patient_id;
+
   return (
     <div
       key={followUp.id}
@@ -20,7 +31,7 @@ export const FollowUpItem = ({ followUp }: FollowUpItemProps) => {
     >
       <div className="flex justify-between items-start mb-3">
         <div>
-          <Link to={`/patients/${followUp.patientId}`}>
+          <Link to={`/patients/${patientRouteId}`}>
             <h3 className="font-medium text-medical-navy hover:underline">
               {followUp.patientName}
             </h3>
@@ -30,7 +41,7 @@ export const FollowUpItem = ({ followUp }: FollowUpItemProps) => {
           </p>
         </div>
         <div className="flex items-center">
-          {followUp.type === "call" ? (
+          {followUp.type.toLowerCase().includes("call") ? (
             <div className="bg-yellow-100 p-2 rounded-full">
               <Phone className="h-4 w-4 text-yellow-700" />
             </div>
@@ -79,7 +90,7 @@ export const FollowUpItem = ({ followUp }: FollowUpItemProps) => {
       )}
       
       <div className="mt-3 flex justify-end">
-        <Link to={`/patients/${followUp.patientId}`}>
+        <Link to={`/patients/${patientRouteId}`}>
           <Button variant="outline" size="sm">
             View Patient
           </Button>
