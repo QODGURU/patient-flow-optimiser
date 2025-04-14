@@ -1,192 +1,310 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { FollowUp } from "@/types/supabase";
+import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardContent,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { useSupabaseQuery } from '@/hooks/useSupabase';
-import { FollowUp, Patient, Profile } from '@/types/supabase';
-import { MergedFollowUp } from '@/types/followUp';
-import { PlusCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { toast } from 'sonner';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { format, parse } from "date-fns";
+import { useSupabaseQuery, useMutateSupabase } from "@/hooks/useSupabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
-export interface FollowUpTableProps {
-  patientId?: string;
-  limit?: number;
-}
-
-export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit = 10 }) => {
-  const navigate = useNavigate();
-  const [mergedFollowUps, setMergedFollowUps] = useState<MergedFollowUp[]>([]);
-  const [isLoadingDemoData, setIsLoadingDemoData] = useState(true);
+export const FollowUpTable = ({ patientId }: { patientId: string | undefined }) => {
+  const { profile } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState("call");
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [time, setTime] = useState("09:00");
+  const [notes, setNotes] = useState("");
+  const [demoFollowUps, setDemoFollowUps] = useState<FollowUp[]>([]);
   
-  // Get follow-ups from Supabase
-  const { data: followUps, loading: followUpsLoading, refetch: refetchFollowUps } = 
-    useSupabaseQuery<FollowUp>('follow_ups', {
-      filters: patientId ? { patient_id: patientId } : {},
-      orderBy: { column: 'date', ascending: false },
-      limit,
-      enabled: true
-    });
-  
-  // Get patients for patient names
-  const { data: patients } = useSupabaseQuery<Patient>('patients', {
-    columns: 'id, name',
-    enabled: !patientId
-  });
-  
-  // Get profiles for doctor/creator names
-  const { data: profiles } = useSupabaseQuery<Profile>('profiles', {
-    columns: 'id, name'
-  });
-  
-  // Check for demo data first
+  // Debug the patientId prop
   useEffect(() => {
-    setIsLoadingDemoData(true);
-    const demoFollowUps = localStorage.getItem('demo_follow_ups');
-    const demoPatients = localStorage.getItem('demo_patients');
-    
-    if (demoFollowUps && demoPatients && patientId) {
+    console.log("FollowUpTable - patientId prop:", patientId);
+  }, [patientId]);
+
+  useEffect(() => {
+    const storedFollowUps = localStorage.getItem("demo_follow_ups");
+    if (storedFollowUps) {
       try {
-        const parsedFollowUps = JSON.parse(demoFollowUps);
-        const parsedPatients = JSON.parse(demoPatients);
+        const parsedFollowUps = JSON.parse(storedFollowUps);
         
-        console.log(`Looking for follow-ups for patient ${patientId} (type: ${typeof patientId})`);
-        console.log(`Available patients in demo data:`, parsedPatients.map((p: Patient) => `${p.id} (${typeof p.id})`));
-        console.log(`Available follow-ups in demo data:`, parsedFollowUps.map((f: FollowUp) => `${f.id} (patient: ${f.patient_id}, type: ${typeof f.patient_id})`));
+        // Debug the demo follow-ups and patient ID matching
+        console.log("Available follow-ups in demo data:", parsedFollowUps);
         
-        // Ensure string comparison
-        const filteredFollowUps = parsedFollowUps.filter((f: FollowUp) => 
-          String(f.patient_id) === String(patientId)
-        );
-        
-        console.log(`Found ${filteredFollowUps.length} follow-ups in demo data for patient ${patientId}`);
-        
-        if (filteredFollowUps.length > 0 || patientId) {
-          // Merge data
-          const merged = filteredFollowUps.map((followUp: FollowUp) => {
-            // Ensure string comparison when finding the patient
-            const patient = parsedPatients.find((p: Patient) => String(p.id) === String(followUp.patient_id));
-            return {
-              ...followUp,
-              patientName: patient?.name || 'Unknown Patient',
-              clinicName: 'Demo Clinic',
-              doctorId: followUp.created_by || 'unknown',
-              doctorName: 'Demo Doctor'
-            };
-          });
+        // Filter follow-ups for this patient, ensuring we compare strings
+        if (patientId) {
+          const patientFollowUps = parsedFollowUps.filter((f: FollowUp) => 
+            String(f.patient_id) === String(patientId)
+          );
           
-          setMergedFollowUps(merged);
-          setIsLoadingDemoData(false);
-          return; // Exit early as we have demo data
+          console.log("Filtered follow-ups for patient:", patientFollowUps);
+          setDemoFollowUps(patientFollowUps);
         }
       } catch (error) {
-        console.error("Error parsing demo data:", error);
+        console.error("Error parsing demo follow-ups:", error);
       }
     }
-    
-    setIsLoadingDemoData(false);
-    
-    // If no demo data or error parsing, continue to use Supabase data
-    if (followUps.length > 0) {
-      const merged = followUps.map((followUp) => {
-        const patient = patients.find(p => p.id === followUp.patient_id);
-        const creator = profiles.find(p => p.id === followUp.created_by);
-        
-        return {
-          ...followUp,
-          patientName: patient?.name || 'Unknown Patient',
-          clinicName: 'Clinic Name',
-          doctorName: creator?.name || 'Unknown',
-          doctorId: followUp.created_by || ''
-        };
-      });
-      
-      setMergedFollowUps(merged);
-    } else {
-      // Clear any previous data if we don't have follow-ups
-      setMergedFollowUps([]);
+  }, [patientId]);
+
+  // Get follow-ups from Supabase if needed
+  const { data: followUps, loading, error, refetch } = useSupabaseQuery<FollowUp>(
+    "follow_ups",
+    {
+      filters: { patient_id: patientId },
+      enabled: !!patientId && demoFollowUps.length === 0,
     }
-  }, [followUps, patients, profiles, patientId, limit]);
-  
-  const handleNewFollowUp = () => {
-    if (!patientId) {
-      toast.error('Please select a patient first');
+  );
+
+  const { insert } = useMutateSupabase();
+
+  const handleAddFollowUp = async () => {
+    if (!date) {
+      toast.error("Please select a date");
       return;
     }
-    
-    navigate(`/add-follow-up?patientId=${patientId}`);
+
+    if (!patientId) {
+      toast.error("Patient ID is required");
+      return;
+    }
+
+    try {
+      // Format date as ISO string for the date part
+      const formattedDate = format(date, "yyyy-MM-dd");
+      
+      const newFollowUp = {
+        patient_id: patientId,
+        type,
+        date: formattedDate,
+        time,
+        notes,
+        created_by: profile?.id,
+      };
+
+      console.log("Adding new follow-up:", newFollowUp);
+
+      // If we have demo data, add to localStorage
+      const storedFollowUps = localStorage.getItem("demo_follow_ups");
+      if (storedFollowUps) {
+        try {
+          const parsedFollowUps = JSON.parse(storedFollowUps);
+          const newId = `demo-${Math.random().toString(36).substring(2, 9)}`;
+          const newDemoFollowUp = {
+            ...newFollowUp,
+            id: newId,
+            created_at: new Date().toISOString()
+          };
+          
+          const updatedFollowUps = [...parsedFollowUps, newDemoFollowUp];
+          localStorage.setItem("demo_follow_ups", JSON.stringify(updatedFollowUps));
+          
+          // Update state
+          setDemoFollowUps([...demoFollowUps, newDemoFollowUp]);
+          toast.success("Follow-up added successfully");
+          setOpen(false);
+          resetForm();
+          return;
+        } catch (error) {
+          console.error("Error adding demo follow-up:", error);
+        }
+      }
+      
+      // If no demo data or error, try Supabase
+      await insert("follow_ups", newFollowUp);
+      toast.success("Follow-up added successfully");
+      refetch();
+      setOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error("Error adding follow-up:", error);
+      toast.error("Error adding follow-up");
+    }
   };
-  
+
+  const resetForm = () => {
+    setType("call");
+    setDate(new Date());
+    setTime("09:00");
+    setNotes("");
+  };
+
+  const displayedFollowUps = demoFollowUps.length > 0 ? demoFollowUps : followUps || [];
+
   return (
-    <Card className="mt-8">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Follow-Ups</CardTitle>
-          <CardDescription>
-            {patientId ? 'Scheduled follow-ups for this patient' : 'Recent follow-ups across all patients'}
-          </CardDescription>
-        </div>
-        {patientId && (
-          <Button onClick={handleNewFollowUp} className="bg-medical-teal hover:bg-teal-600">
-            <PlusCircle className="mr-2 h-4 w-4" /> New Follow-Up
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        {(followUpsLoading || isLoadingDemoData) ? (
-          <div className="text-center py-4">Loading follow-ups...</div>
-        ) : mergedFollowUps.length === 0 ? (
-          <div className="text-center py-4 text-gray-500">
-            No follow-ups found {patientId ? 'for this patient' : ''}
+    <div className="mt-8">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Follow-ups</CardTitle>
+            <CardDescription>Schedule and track follow-ups for this patient</CardDescription>
           </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {!patientId && <TableHead>Patient</TableHead>}
-                <TableHead>Type</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead>Response</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mergedFollowUps.map((followUp) => (
-                <TableRow key={followUp.id}>
-                  {!patientId && (
-                    <TableCell className="font-medium">
-                      {followUp.patientName}
-                    </TableCell>
-                  )}
-                  <TableCell>{followUp.type}</TableCell>
-                  <TableCell>
-                    {followUp.date ? format(new Date(followUp.date), 'MMM dd, yyyy') : 'N/A'}
-                  </TableCell>
-                  <TableCell>{followUp.time || 'N/A'}</TableCell>
-                  <TableCell>{followUp.notes || 'N/A'}</TableCell>
-                  <TableCell>{followUp.response || 'No response yet'}</TableCell>
-                </TableRow>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-medical-teal hover:bg-teal-600">Add Follow-up</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Follow-up</DialogTitle>
+                <DialogDescription>
+                  Schedule a new follow-up for this patient
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Select value={type} onValueChange={setType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="call">Call</SelectItem>
+                      <SelectItem value="message">Message</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="appointment">Appointment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="time">Time</Label>
+                  <Input
+                    id="time"
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add any notes about this follow-up"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  className="bg-medical-teal hover:bg-teal-600"
+                  onClick={handleAddFollowUp}
+                >
+                  Add Follow-up
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center p-4">Loading follow-ups...</div>
+          ) : displayedFollowUps.length > 0 ? (
+            <div className="space-y-4">
+              {displayedFollowUps.map((followUp) => (
+                <div
+                  key={followUp.id}
+                  className="border rounded-md p-4 hover:bg-slate-50"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium">
+                        {followUp.type.charAt(0).toUpperCase() + followUp.type.slice(1)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(followUp.date).toLocaleDateString()} at {followUp.time}
+                      </div>
+                      {followUp.notes && (
+                        <div className="mt-2 text-sm">{followUp.notes}</div>
+                      )}
+                    </div>
+                    <div>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          followUp.response
+                            ? followUp.response === "yes"
+                              ? "bg-green-100 text-green-800"
+                              : followUp.response === "no"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {followUp.response
+                          ? followUp.response.charAt(0).toUpperCase() +
+                            followUp.response.slice(1)
+                          : "Pending"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          ) : (
+            <div className="text-center p-4 text-gray-500">
+              No follow-ups scheduled yet
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };

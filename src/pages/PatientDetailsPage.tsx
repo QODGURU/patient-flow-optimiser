@@ -58,13 +58,17 @@ const PatientDetailsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [patientNotFound, setPatientNotFound] = useState(false);
 
-  // Check if we have demo data
+  // Debug the patient ID we're looking for
+  useEffect(() => {
+    console.log("PatientDetailsPage - Looking for patient with ID:", patientId);
+  }, [patientId]);
+
+  // Check for demo data
   useEffect(() => {
     setIsLoading(true);
     setPatientNotFound(false);
     
     if (patientId) {
-      console.log("Looking for patient with ID:", patientId);
       const demoPatients = localStorage.getItem("demo_patients");
       
       if (demoPatients) {
@@ -72,7 +76,7 @@ const PatientDetailsPage = () => {
           const parsedPatients = JSON.parse(demoPatients);
           console.log("Available patient IDs in demo data:", parsedPatients.map((p: Patient) => `${p.id} (${typeof p.id})`));
           
-          // Ensure we're comparing strings to strings
+          // Ensure we're comparing strings to strings for reliable matching
           const patient = parsedPatients.find((p: Patient) => 
             String(p.id) === String(patientId)
           );
@@ -106,7 +110,7 @@ const PatientDetailsPage = () => {
   }, [patientId]);
 
   // Load data from Supabase if no manual data
-  const { data: patient, loading: patientLoading } = useSupabaseQuery<Patient>(
+  const { data: patient, loading: patientLoading, error: patientError, refetch: refetchPatient } = useSupabaseQuery<Patient>(
     "patients",
     {
       filters: { id: patientId },
@@ -115,8 +119,13 @@ const PatientDetailsPage = () => {
   );
 
   useEffect(() => {
-    if (patientLoading === false && !manualPatientData) {
+    if (patientError) {
+      console.error("Error fetching patient data:", patientError);
+      setPatientNotFound(true);
+      setIsLoading(false);
+    } else if (patientLoading === false && !manualPatientData) {
       if (patient && patient.length > 0) {
+        console.log("Found patient in Supabase:", patient[0]);
         setName(patient[0].name || '');
         setPhone(patient[0].phone || '');
         setEmail(patient[0].email || '');
@@ -129,7 +138,7 @@ const PatientDetailsPage = () => {
         setIsLoading(false);
       }
     }
-  }, [patient, patientLoading, manualPatientData]);
+  }, [patient, patientLoading, patientError, manualPatientData]);
 
   const { data: doctors } = useSupabaseQuery<Profile>("profiles", {
     filters: { role: "doctor" },
@@ -168,7 +177,7 @@ const PatientDetailsPage = () => {
         if (demoPatients) {
           const parsedPatients = JSON.parse(demoPatients);
           const updatedPatients = parsedPatients.map((p: Patient) => {
-            if (p.id.toString() === patientId.toString()) {
+            if (String(p.id) === String(patientId)) {
               return {
                 ...p,
                 name,
@@ -203,6 +212,7 @@ const PatientDetailsPage = () => {
       });
       toast.success("Patient details updated successfully");
       setIsEditing(false);
+      refetchPatient();
     } catch (error) {
       // Error is handled in the mutation hook
     }
@@ -222,7 +232,7 @@ const PatientDetailsPage = () => {
         if (demoPatients) {
           const parsedPatients = JSON.parse(demoPatients);
           const updatedPatients = parsedPatients.filter((p: Patient) => 
-            p.id.toString() !== patientId.toString()
+            String(p.id) !== String(patientId)
           );
           
           // Update localStorage
@@ -233,7 +243,7 @@ const PatientDetailsPage = () => {
           if (demoFollowUps) {
             const parsedFollowUps = JSON.parse(demoFollowUps);
             const updatedFollowUps = parsedFollowUps.filter((f: FollowUp) => 
-              f.patient_id.toString() !== patientId.toString()
+              String(f.patient_id) !== String(patientId)
             );
             localStorage.setItem("demo_follow_ups", JSON.stringify(updatedFollowUps));
           }
@@ -587,3 +597,4 @@ const PatientDetailsPage = () => {
 };
 
 export default PatientDetailsPage;
+
