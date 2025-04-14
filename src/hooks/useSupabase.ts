@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 // Use string literal type for tables instead of using api_configurations which isn't in the database schema
 type TableName = 'profiles' | 'patients' | 'clinics' | 'follow_ups' | 'settings';
@@ -50,7 +49,8 @@ export function useSupabaseQuery<T>(
         .from(tableName)
         .select('*', { count: 'exact', head: true });
       
-      let filteredCountQuery: any = countQuery;
+      // Apply filters - use any type to avoid deep type recursion
+      let filteredCountQuery = countQuery;
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
@@ -74,7 +74,7 @@ export function useSupabaseQuery<T>(
         .from(tableName)
         .select(foreignTable ? `${columns}, ${foreignTable}(*)` : columns);
 
-      // Apply filters
+      // Apply filters - avoid complex typing for filters
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
