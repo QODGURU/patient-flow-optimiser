@@ -60,26 +60,21 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
     const demoFollowUps = localStorage.getItem('demo_follow_ups');
     const demoPatients = localStorage.getItem('demo_patients');
     
-    if (demoFollowUps && demoPatients) {
+    if (demoFollowUps && demoPatients && patientId) {
       try {
         const parsedFollowUps = JSON.parse(demoFollowUps);
         const parsedPatients = JSON.parse(demoPatients);
         
-        console.log(`Looking for follow-ups ${patientId ? `for patient ${patientId}` : 'for all patients'}`);
+        console.log(`Looking for follow-ups for patient ${patientId} (type: ${typeof patientId})`);
         console.log(`Available patients in demo data:`, parsedPatients.map((p: Patient) => `${p.id} (${typeof p.id})`));
-        console.log(`Available follow-ups in demo data:`, parsedFollowUps.map((f: FollowUp) => `${f.id} (patient: ${f.patient_id})`));
+        console.log(`Available follow-ups in demo data:`, parsedFollowUps.map((f: FollowUp) => `${f.id} (patient: ${f.patient_id}, type: ${typeof f.patient_id})`));
         
-        let filteredFollowUps;
+        // Ensure string comparison
+        const filteredFollowUps = parsedFollowUps.filter((f: FollowUp) => 
+          String(f.patient_id) === String(patientId)
+        );
         
-        if (patientId) {
-          // Filter for specific patient - ensure string comparison
-          filteredFollowUps = parsedFollowUps.filter((f: FollowUp) => String(f.patient_id) === String(patientId));
-          console.log(`Found ${filteredFollowUps.length} follow-ups in demo data for patient ${patientId}`);
-        } else {
-          // Get all follow-ups
-          filteredFollowUps = parsedFollowUps;
-          console.log(`Found ${filteredFollowUps.length} total follow-ups in demo data`);
-        }
+        console.log(`Found ${filteredFollowUps.length} follow-ups in demo data for patient ${patientId}`);
         
         if (filteredFollowUps.length > 0 || patientId) {
           // Merge data
@@ -90,13 +85,12 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
               ...followUp,
               patientName: patient?.name || 'Unknown Patient',
               clinicName: 'Demo Clinic',
-              doctorId: followUp.created_by || 'unknown'
+              doctorId: followUp.created_by || 'unknown',
+              doctorName: 'Demo Doctor'
             };
           });
           
-          // Apply limit if needed and not specific to a patient
-          const limitedFollowUps = !patientId && limit ? merged.slice(0, limit) : merged;
-          setMergedFollowUps(limitedFollowUps);
+          setMergedFollowUps(merged);
           setIsLoadingDemoData(false);
           return; // Exit early as we have demo data
         }
@@ -123,6 +117,9 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
       });
       
       setMergedFollowUps(merged);
+    } else {
+      // Clear any previous data if we don't have follow-ups
+      setMergedFollowUps([]);
     }
   }, [followUps, patients, profiles, patientId, limit]);
   
@@ -151,7 +148,7 @@ export const FollowUpTable: React.FC<FollowUpTableProps> = ({ patientId, limit =
         )}
       </CardHeader>
       <CardContent>
-        {(followUpsLoading || isLoadingDemoData) && mergedFollowUps.length === 0 ? (
+        {(followUpsLoading || isLoadingDemoData) ? (
           <div className="text-center py-4">Loading follow-ups...</div>
         ) : mergedFollowUps.length === 0 ? (
           <div className="text-center py-4 text-gray-500">

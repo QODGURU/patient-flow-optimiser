@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, ArrowLeft } from "lucide-react";
+import { Home, ArrowLeft, AlertTriangle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -32,6 +32,9 @@ const NotFoundPage = () => {
             </div>
             <Card>
               <CardContent className="p-8 text-center">
+                <div className="flex justify-center mb-6">
+                  <AlertTriangle className="h-16 w-16 text-red-500" />
+                </div>
                 <h1 className="text-2xl font-bold text-red-600 mb-4">Patient Not Found</h1>
                 <p className="text-gray-600 mb-8">
                   The patient you're looking for could not be found. It may have been deleted or you may have an incorrect link.

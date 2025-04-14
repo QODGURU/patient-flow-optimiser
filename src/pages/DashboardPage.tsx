@@ -101,6 +101,7 @@ export default function DashboardPage() {
                   <TabsTrigger value="performance">Performance</TabsTrigger>
                   <TabsTrigger value="patients">Patients</TabsTrigger>
                   <TabsTrigger value="interactions">Interactions</TabsTrigger>
+                  <TabsTrigger value="leadFunnel">Lead Funnel</TabsTrigger>
                 </TabsList>
                 
                 <div className="flex space-x-1 bg-gray-100 p-1 rounded-md">
@@ -141,6 +142,10 @@ export default function DashboardPage() {
               
               <TabsContent value="interactions" className="space-y-4">
                 <DashboardCharts chartTypes={["followUpTrend", "timePreferences", "interactionOutcomes"]} />
+              </TabsContent>
+              
+              <TabsContent value="leadFunnel" className="space-y-4">
+                <DashboardCharts chartTypes={["leadFunnel"]} />
               </TabsContent>
             </Tabs>
           </>
