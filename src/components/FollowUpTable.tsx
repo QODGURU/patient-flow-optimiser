@@ -29,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { useSupabaseQuery, useMutateSupabase } from "@/hooks/useSupabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Calendar } from "@/components/ui/calendar";
@@ -49,9 +49,15 @@ export const FollowUpTable = ({ patientId }: { patientId: string | undefined }) 
   // Debug the patientId prop
   useEffect(() => {
     console.log("FollowUpTable - patientId prop:", patientId);
+    if (!patientId) {
+      console.error("FollowUpTable: No patientId provided");
+    }
   }, [patientId]);
 
   useEffect(() => {
+    // Only try to fetch follow-ups if we have a patientId
+    if (!patientId) return;
+    
     const storedFollowUps = localStorage.getItem("demo_follow_ups");
     if (storedFollowUps) {
       try {
@@ -60,22 +66,20 @@ export const FollowUpTable = ({ patientId }: { patientId: string | undefined }) 
         // Debug the demo follow-ups and patient ID matching
         console.log("Available follow-ups in demo data:", parsedFollowUps);
         
-        // Filter follow-ups for this patient, ensuring we compare strings
-        if (patientId) {
-          const patientFollowUps = parsedFollowUps.filter((f: FollowUp) => 
-            String(f.patient_id) === String(patientId)
-          );
-          
-          console.log("Filtered follow-ups for patient:", patientFollowUps);
-          setDemoFollowUps(patientFollowUps);
-        }
+        // Ensure consistent string comparison
+        const patientFollowUps = parsedFollowUps.filter((f: FollowUp) => 
+          String(f.patient_id) === String(patientId)
+        );
+        
+        console.log(`Filtered follow-ups for patient ${patientId}:`, patientFollowUps);
+        setDemoFollowUps(patientFollowUps);
       } catch (error) {
         console.error("Error parsing demo follow-ups:", error);
       }
     }
   }, [patientId]);
 
-  // Get follow-ups from Supabase if needed
+  // Get follow-ups from Supabase only if we have a patientId and no demo data
   const { data: followUps, loading, error, refetch } = useSupabaseQuery<FollowUp>(
     "follow_ups",
     {
@@ -158,6 +162,10 @@ export const FollowUpTable = ({ patientId }: { patientId: string | undefined }) 
   };
 
   const displayedFollowUps = demoFollowUps.length > 0 ? demoFollowUps : followUps || [];
+
+  if (!patientId) {
+    return null; // Don't render anything if there's no patientId
+  }
 
   return (
     <div className="mt-8">

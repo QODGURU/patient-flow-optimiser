@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -92,6 +92,7 @@ const PatientDetailsPage = () => {
             setNotes(patient.notes || '');
             setNextInteraction(patient.next_interaction ? new Date(patient.next_interaction) : undefined);
             setIsLoading(false);
+            setPatientNotFound(false);
           } else {
             console.error("Patient not found in demo data for ID:", patientId);
             setPatientNotFound(true);
@@ -106,6 +107,11 @@ const PatientDetailsPage = () => {
         // No demo data exists, will rely on Supabase query
         console.log("No demo data found, checking Supabase");
       }
+    } else {
+      // No patientId provided at all, set error state
+      console.error("No patient ID was provided in URL parameters");
+      setPatientNotFound(true);
+      setIsLoading(false);
     }
   }, [patientId]);
 
@@ -132,6 +138,7 @@ const PatientDetailsPage = () => {
         setNotes(patient[0].notes || '');
         setNextInteraction(patient[0].next_interaction ? new Date(patient[0].next_interaction) : undefined);
         setIsLoading(false);
+        setPatientNotFound(false);
       } else {
         console.log("No patient found in Supabase");
         setPatientNotFound(true);
@@ -275,7 +282,7 @@ const PatientDetailsPage = () => {
       <div className="p-8">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => navigate("/patients")}>
-            ← Back to Patients
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
           </Button>
         </div>
         <Card className="max-w-2xl mx-auto">
@@ -327,7 +334,7 @@ const PatientDetailsPage = () => {
     <div className="animate-fade-in">
       <div className="mb-6">
         <Button variant="ghost" onClick={() => navigate("/patients")}>
-          ← Back to Patients
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients
         </Button>
       </div>
 
@@ -563,7 +570,8 @@ const PatientDetailsPage = () => {
         </CardFooter>
       </Card>
 
-      <FollowUpTable patientId={patientId} />
+      {/* Only render FollowUpTable if we have a valid patientId */}
+      {patientId && <FollowUpTable patientId={patientId} />}
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -597,4 +605,3 @@ const PatientDetailsPage = () => {
 };
 
 export default PatientDetailsPage;
-

@@ -12,6 +12,7 @@ const NotFoundPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isPatientRoute = location.pathname.startsWith('/patients/');
+  const patientId = isPatientRoute ? location.pathname.split('/').pop() : null;
 
   useEffect(() => {
     console.error(
@@ -37,7 +38,7 @@ const NotFoundPage = () => {
                 </div>
                 <h1 className="text-2xl font-bold text-red-600 mb-4">Patient Not Found</h1>
                 <p className="text-gray-600 mb-8">
-                  The patient you're looking for could not be found. It may have been deleted or you may have an incorrect link.
+                  The patient with ID {patientId} could not be found. It may have been deleted or you may have an incorrect link.
                 </p>
                 <Button 
                   onClick={() => navigate("/patients")}
