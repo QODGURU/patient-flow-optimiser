@@ -264,6 +264,13 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartTypes = [
     return chartTypes.includes("all") || chartTypes.includes(chartName);
   };
 
+  // Define color objects for chart components that expect objects
+  const chartColorObjects = {
+    contacted: PREMIUM_COLORS[0],
+    interested: PREMIUM_COLORS[1],
+    booked: PREMIUM_COLORS[2]
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
       {/* Lead Funnel (New) */}
@@ -283,7 +290,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartTypes = [
         <Card className="col-span-1 shadow-md hover:shadow-lg transition-shadow duration-300">
           <CardContent className="p-6">
             <h3 className="text-lg font-medium mb-4 text-gray-800">{t("conversionRateByDoctor")}</h3>
-            <ConversionRateChart data={conversionRateData} colors={PREMIUM_COLORS} />
+            <ConversionRateChart data={conversionRateData} colors={chartColorObjects} />
           </CardContent>
         </Card>
       )}

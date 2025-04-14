@@ -15,11 +15,12 @@ interface PatientStatusChartProps {
   title?: string;
   className?: string;
   loading?: boolean;
+  colors?: string[]; // Added colors prop
 }
 
-const COLORS = ["#101B4C", "#00FFC8", "#8066DC", "#FFC107", "#FF3B3B", "#01C5C4"];
+const DEFAULT_COLORS = ["#101B4C", "#00FFC8", "#8066DC", "#FFC107", "#FF3B3B", "#01C5C4"];
 
-const PatientStatusChart = ({ data, title, className, loading = false }: PatientStatusChartProps) => {
+const PatientStatusChart = ({ data, title, className, loading = false, colors = DEFAULT_COLORS }: PatientStatusChartProps) => {
   const { t } = useLanguage();
   
   const chartData = useMemo(() => {
@@ -59,7 +60,7 @@ const PatientStatusChart = ({ data, title, className, loading = false }: Patient
                   {chartData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={COLORS[index % COLORS.length]} 
+                      fill={colors[index % colors.length]} 
                       className="hover:opacity-80 transition-opacity"
                     />
                   ))}
