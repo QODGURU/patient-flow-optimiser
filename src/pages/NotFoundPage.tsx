@@ -12,14 +12,16 @@ const NotFoundPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isPatientRoute = location.pathname.startsWith('/patients/');
-  const patientId = isPatientRoute ? location.pathname.split('/').pop() : null;
+  const patientId = isPatientRoute ? location.pathname.split('/')[2] : null;
 
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",
-      location.pathname
+      location.pathname,
+      "Patient ID (if applicable):",
+      patientId
     );
-  }, [location.pathname]);
+  }, [location.pathname, patientId]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

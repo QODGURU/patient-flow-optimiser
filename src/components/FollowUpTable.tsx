@@ -48,7 +48,7 @@ export const FollowUpTable = ({ patientId }: { patientId: string | undefined }) 
   
   // Debug the patientId prop
   useEffect(() => {
-    console.log("FollowUpTable - patientId prop:", patientId);
+    console.log("FollowUpTable - patientId prop:", patientId, typeof patientId);
     if (!patientId) {
       console.error("FollowUpTable: No patientId provided");
     }
@@ -65,6 +65,7 @@ export const FollowUpTable = ({ patientId }: { patientId: string | undefined }) 
         
         // Debug the demo follow-ups and patient ID matching
         console.log("Available follow-ups in demo data:", parsedFollowUps);
+        console.log("Looking for patient with ID:", patientId, "type:", typeof patientId);
         
         // Ensure consistent string comparison
         const patientFollowUps = parsedFollowUps.filter((f: FollowUp) => 

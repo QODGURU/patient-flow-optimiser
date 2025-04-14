@@ -1,0 +1,4 @@
+
+[build]
+command = "deno bundle index.ts"
+entry_point = "index.ts"

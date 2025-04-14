@@ -15,4 +15,8 @@ export interface MergedFollowUp {
   created_by?: string;
   created_at?: string;
   followUpDate?: string;
+  // AI call related fields
+  call_recording_url?: string;
+  call_transcript?: string;
+  call_summary?: string;
 }
